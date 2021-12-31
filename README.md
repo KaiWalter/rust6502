@@ -6,3 +6,6 @@
 
 - everything is a component (CPU, memory) which is linked by interface to the the emulator can be expanded for various use cases (as with my previous implementations Apple1, Commodore PET, ...)
 
+## resources
+
+ - [Writing an OS in Rust by Philipp Oppermann](https://os.phil-opp.com/)
