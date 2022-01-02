@@ -1,3 +1,5 @@
+use crate::address_bus::AddressBus;
+
 macro_rules! instr {
     ($name:expr,$operation:expr,$address_mode:expr,$cycles:expr) => {{
         OperationDefinition {
@@ -9,8 +11,37 @@ macro_rules! instr {
     }};
 }
 
-type AddressModeFunction = fn();
-type OpCodeFunction = fn();
+struct AddressModeValues {
+    absolute_address: u16,
+    fetched_value: u8,
+}
+
+struct Cpu {
+    a: u8,
+    x: u8,
+    y: u8,
+    pc: u16,
+    sp: u8,
+    status: u8,
+    address_bus: AddressBus,
+}
+
+#[derive(Debug, Clone)]
+pub struct CpuError {
+    operation: String,
+    pc: u16,
+}
+
+impl CpuError {
+    fn new(operation: &str, pc: u16) -> CpuError {
+        CpuError {
+            operation: operation.to_string(),
+            pc: pc,
+        }
+    }
+}
+type AddressModeFunction = fn(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError>;
+type OpCodeFunction = fn(cpu: &mut Cpu, address_mode_values: AddressModeValues);
 
 struct OperationDefinition<'a> {
     name: &'a str,
@@ -20,267 +51,409 @@ struct OperationDefinition<'a> {
 }
 
 static OPCODES: [OperationDefinition; 256] = [
-    instr! {"BRK", BRK, IMM, 7},
-    instr! {"ORA", ORA, IZX, 6},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 3},
-    instr! {"ORA", ORA, ZP0, 3},
-    instr! {"ASL", ASL, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"PHP", PHP, IMP, 3},
-    instr! {"ORA", ORA, IMM, 2},
-    instr! {"ASL", ASL, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"ORA", ORA, ABS, 4},
-    instr! {"ASL", ASL, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BPL", BPL, REL, 2},
-    instr! {"ORA", ORA, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"ORA", ORA, ZPX, 4},
-    instr! {"ASL", ASL, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"CLC", CLC, IMP, 2},
-    instr! {"ORA", ORA, ABY, 4},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"ORA", ORA, ABX, 4},
-    instr! {"ASL", ASL, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"JSR", JSR, ABS, 6},
-    instr! {"AND", AND, IZX, 6},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"BIT", BIT, ZP0, 3},
-    instr! {"AND", AND, ZP0, 3},
-    instr! {"ROL", ROL, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"PLP", PLP, IMP, 4},
-    instr! {"AND", AND, IMM, 2},
-    instr! {"ROL", ROL, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"BIT", BIT, ABS, 4},
-    instr! {"AND", AND, ABS, 4},
-    instr! {"ROL", ROL, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BMI", BMI, REL, 2},
-    instr! {"AND", AND, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"AND", AND, ZPX, 4},
-    instr! {"ROL", ROL, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"SEC", SEC, IMP, 2},
-    instr! {"AND", AND, ABY, 4},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"AND", AND, ABX, 4},
-    instr! {"ROL", ROL, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"RTI", RTI, IMP, 6},
-    instr! {"EOR", EOR, IZX, 6},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 3},
-    instr! {"EOR", EOR, ZP0, 3},
-    instr! {"LSR", LSR, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"PHA", PHA, IMP, 3},
-    instr! {"EOR", EOR, IMM, 2},
-    instr! {"LSR", LSR, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"JMP", JMP, ABS, 3},
-    instr! {"EOR", EOR, ABS, 4},
-    instr! {"LSR", LSR, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BVC", BVC, REL, 2},
-    instr! {"EOR", EOR, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"EOR", EOR, ZPX, 4},
-    instr! {"LSR", LSR, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"CLI", CLI, IMP, 2},
-    instr! {"EOR", EOR, ABY, 4},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"EOR", EOR, ABX, 4},
-    instr! {"LSR", LSR, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"RTS", RTS, IMP, 6},
-    instr! {"ADC", ADC, IZX, 6},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 3},
-    instr! {"ADC", ADC, ZP0, 3},
-    instr! {"ROR", ROR, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"PLA", PLA, IMP, 4},
-    instr! {"ADC", ADC, IMM, 2},
-    instr! {"ROR", ROR, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"JMP", JMP, IND, 5},
-    instr! {"ADC", ADC, ABS, 4},
-    instr! {"ROR", ROR, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BVS", BVS, REL, 2},
-    instr! {"ADC", ADC, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"ADC", ADC, ZPX, 4},
-    instr! {"ROR", ROR, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"SEI", SEI, IMP, 2},
-    instr! {"ADC", ADC, ABY, 4},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"ADC", ADC, ABX, 4},
-    instr! {"ROR", ROR, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"STA", STA, IZX, 6},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"STY", STY, ZP0, 3},
-    instr! {"STA", STA, ZP0, 3},
-    instr! {"STX", STX, ZP0, 3},
-    instr! {"???", XXX, IMP, 3},
-    instr! {"DEY", DEY, IMP, 2},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"TXA", TXA, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"STY", STY, ABS, 4},
-    instr! {"STA", STA, ABS, 4},
-    instr! {"STX", STX, ABS, 4},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"BCC", BCC, REL, 2},
-    instr! {"STA", STA, IZY, 6},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"STY", STY, ZPX, 4},
-    instr! {"STA", STA, ZPX, 4},
-    instr! {"STX", STX, ZPY, 4},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"TYA", TYA, IMP, 2},
-    instr! {"STA", STA, ABY, 5},
-    instr! {"TXS", TXS, IMP, 2},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"???", NOP, IMP, 5},
-    instr! {"STA", STA, ABX, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"LDY", LDY, IMM, 2},
-    instr! {"LDA", LDA, IZX, 6},
-    instr! {"LDX", LDX, IMM, 2},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"LDY", LDY, ZP0, 3},
-    instr! {"LDA", LDA, ZP0, 3},
-    instr! {"LDX", LDX, ZP0, 3},
-    instr! {"???", XXX, IMP, 3},
-    instr! {"TAY", TAY, IMP, 2},
-    instr! {"LDA", LDA, IMM, 2},
-    instr! {"TAX", TAX, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"LDY", LDY, ABS, 4},
-    instr! {"LDA", LDA, ABS, 4},
-    instr! {"LDX", LDX, ABS, 4},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"BCS", BCS, REL, 2},
-    instr! {"LDA", LDA, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"LDY", LDY, ZPX, 4},
-    instr! {"LDA", LDA, ZPX, 4},
-    instr! {"LDX", LDX, ZPY, 4},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"CLV", CLV, IMP, 2},
-    instr! {"LDA", LDA, ABY, 4},
-    instr! {"TSX", TSX, IMP, 2},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"LDY", LDY, ABX, 4},
-    instr! {"LDA", LDA, ABX, 4},
-    instr! {"LDX", LDX, ABY, 4},
-    instr! {"???", XXX, IMP, 4},
-    instr! {"CPY", CPY, IMM, 2},
-    instr! {"CMP", CMP, IZX, 6},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"CPY", CPY, ZP0, 3},
-    instr! {"CMP", CMP, ZP0, 3},
-    instr! {"DEC", DEC, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"INY", INY, IMP, 2},
-    instr! {"CMP", CMP, IMM, 2},
-    instr! {"DEX", DEX, IMP, 2},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"CPY", CPY, ABS, 4},
-    instr! {"CMP", CMP, ABS, 4},
-    instr! {"DEC", DEC, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BNE", BNE, REL, 2},
-    instr! {"CMP", CMP, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"CMP", CMP, ZPX, 4},
-    instr! {"DEC", DEC, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"CLD", CLD, IMP, 2},
-    instr! {"CMP", CMP, ABY, 4},
-    instr! {"NOP", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"CMP", CMP, ABX, 4},
-    instr! {"DEC", DEC, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"CPX", CPX, IMM, 2},
-    instr! {"SBC", SBC, IZX, 6},
-    instr! {"???", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"CPX", CPX, ZP0, 3},
-    instr! {"SBC", SBC, ZP0, 3},
-    instr! {"INC", INC, ZP0, 5},
-    instr! {"???", XXX, IMP, 5},
-    instr! {"INX", INX, IMP, 2},
-    instr! {"SBC", SBC, IMM, 2},
-    instr! {"NOP", NOP, IMP, 2},
-    instr! {"???", SBC, IMP, 2},
-    instr! {"CPX", CPX, ABS, 4},
-    instr! {"SBC", SBC, ABS, 4},
-    instr! {"INC", INC, ABS, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"BEQ", BEQ, REL, 2},
-    instr! {"SBC", SBC, IZY, 5},
-    instr! {"???", XXX, IMP, 2},
-    instr! {"???", XXX, IMP, 8},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"SBC", SBC, ZPX, 4},
-    instr! {"INC", INC, ZPX, 6},
-    instr! {"???", XXX, IMP, 6},
-    instr! {"SED", SED, IMP, 2},
-    instr! {"SBC", SBC, ABY, 4},
-    instr! {"NOP", NOP, IMP, 2},
-    instr! {"???", XXX, IMP, 7},
-    instr! {"???", NOP, IMP, 4},
-    instr! {"SBC", SBC, ABX, 4},
-    instr! {"INC", INC, ABX, 7},
-    instr! {"???", XXX, IMP, 7},
+    instr! {"brk", brk, imm, 7},
+    instr! {"ora", ora, izx, 6},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 3},
+    instr! {"ora", ora, zp0, 3},
+    instr! {"asl", asl, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"php", php, imp, 3},
+    instr! {"ora", ora, imm, 2},
+    instr! {"asl", asl, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", nop, imp, 4},
+    instr! {"ora", ora, abs, 4},
+    instr! {"asl", asl, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"bpl", bpl, rel, 2},
+    instr! {"ora", ora, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"ora", ora, zpx, 4},
+    instr! {"asl", asl, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"clc", clc, imp, 2},
+    instr! {"ora", ora, aby, 4},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"ora", ora, abx, 4},
+    instr! {"asl", asl, abx, 7},
+    instr! {"???", xxx, imp, 7},
+    instr! {"jsr", jsr, abs, 6},
+    instr! {"and", and, izx, 6},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"bit", bit, zp0, 3},
+    instr! {"and", and, zp0, 3},
+    instr! {"rol", rol, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"plp", plp, imp, 4},
+    instr! {"and", and, imm, 2},
+    instr! {"rol", rol, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"bit", bit, abs, 4},
+    instr! {"and", and, abs, 4},
+    instr! {"rol", rol, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"bmi", bmi, rel, 2},
+    instr! {"and", and, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"and", and, zpx, 4},
+    instr! {"rol", rol, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"sec", sec, imp, 2},
+    instr! {"and", and, aby, 4},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"and", and, abx, 4},
+    instr! {"rol", rol, abx, 7},
+    instr! {"???", xxx, imp, 7},
+    instr! {"rti", rti, imp, 6},
+    instr! {"eor", eor, izx, 6},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 3},
+    instr! {"eor", eor, zp0, 3},
+    instr! {"lsr", lsr, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"pha", pha, imp, 3},
+    instr! {"eor", eor, imm, 2},
+    instr! {"lsr", lsr, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"jmp", jmp, abs, 3},
+    instr! {"eor", eor, abs, 4},
+    instr! {"lsr", lsr, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"bvc", bvc, rel, 2},
+    instr! {"eor", eor, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"eor", eor, zpx, 4},
+    instr! {"lsr", lsr, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"cli", cli, imp, 2},
+    instr! {"eor", eor, aby, 4},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"eor", eor, abx, 4},
+    instr! {"lsr", lsr, abx, 7},
+    instr! {"???", xxx, imp, 7},
+    instr! {"rts", rts, imp, 6},
+    instr! {"adc", adc, izx, 6},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 3},
+    instr! {"adc", adc, zp0, 3},
+    instr! {"ror", ror, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"pla", pla, imp, 4},
+    instr! {"adc", adc, imm, 2},
+    instr! {"ror", ror, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"jmp", jmp, ind, 5},
+    instr! {"adc", adc, abs, 4},
+    instr! {"ror", ror, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"bvs", bvs, rel, 2},
+    instr! {"adc", adc, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"adc", adc, zpx, 4},
+    instr! {"ror", ror, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"sei", sei, imp, 2},
+    instr! {"adc", adc, aby, 4},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"adc", adc, abx, 4},
+    instr! {"ror", ror, abx, 7},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 2},
+    instr! {"sta", sta, izx, 6},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 6},
+    instr! {"sty", sty, zp0, 3},
+    instr! {"sta", sta, zp0, 3},
+    instr! {"stx", stx, zp0, 3},
+    instr! {"???", xxx, imp, 3},
+    instr! {"dey", dey, imp, 2},
+    instr! {"???", nop, imp, 2},
+    instr! {"txa", txa, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"sty", sty, abs, 4},
+    instr! {"sta", sta, abs, 4},
+    instr! {"stx", stx, abs, 4},
+    instr! {"???", xxx, imp, 4},
+    instr! {"bcc", bcc, rel, 2},
+    instr! {"sta", sta, izy, 6},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 6},
+    instr! {"sty", sty, zpx, 4},
+    instr! {"sta", sta, zpx, 4},
+    instr! {"stx", stx, zpy, 4},
+    instr! {"???", xxx, imp, 4},
+    instr! {"tya", tya, imp, 2},
+    instr! {"sta", sta, aby, 5},
+    instr! {"txs", txs, imp, 2},
+    instr! {"???", xxx, imp, 5},
+    instr! {"???", nop, imp, 5},
+    instr! {"sta", sta, abx, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"ldy", ldy, imm, 2},
+    instr! {"lda", lda, izx, 6},
+    instr! {"ldx", ldx, imm, 2},
+    instr! {"???", xxx, imp, 6},
+    instr! {"ldy", ldy, zp0, 3},
+    instr! {"lda", lda, zp0, 3},
+    instr! {"ldx", ldx, zp0, 3},
+    instr! {"???", xxx, imp, 3},
+    instr! {"tay", tay, imp, 2},
+    instr! {"lda", lda, imm, 2},
+    instr! {"tax", tax, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"ldy", ldy, abs, 4},
+    instr! {"lda", lda, abs, 4},
+    instr! {"ldx", ldx, abs, 4},
+    instr! {"???", xxx, imp, 4},
+    instr! {"bcs", bcs, rel, 2},
+    instr! {"lda", lda, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 5},
+    instr! {"ldy", ldy, zpx, 4},
+    instr! {"lda", lda, zpx, 4},
+    instr! {"ldx", ldx, zpy, 4},
+    instr! {"???", xxx, imp, 4},
+    instr! {"clv", clv, imp, 2},
+    instr! {"lda", lda, aby, 4},
+    instr! {"tsx", tsx, imp, 2},
+    instr! {"???", xxx, imp, 4},
+    instr! {"ldy", ldy, abx, 4},
+    instr! {"lda", lda, abx, 4},
+    instr! {"ldx", ldx, aby, 4},
+    instr! {"???", xxx, imp, 4},
+    instr! {"cpy", cpy, imm, 2},
+    instr! {"cmp", cmp, izx, 6},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"cpy", cpy, zp0, 3},
+    instr! {"cmp", cmp, zp0, 3},
+    instr! {"dec", dec, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"iny", iny, imp, 2},
+    instr! {"cmp", cmp, imm, 2},
+    instr! {"dex", dex, imp, 2},
+    instr! {"???", xxx, imp, 2},
+    instr! {"cpy", cpy, abs, 4},
+    instr! {"cmp", cmp, abs, 4},
+    instr! {"dec", dec, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"bne", bne, rel, 2},
+    instr! {"cmp", cmp, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"cmp", cmp, zpx, 4},
+    instr! {"dec", dec, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"cld", cld, imp, 2},
+    instr! {"cmp", cmp, aby, 4},
+    instr! {"nop", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"cmp", cmp, abx, 4},
+    instr! {"dec", dec, abx, 7},
+    instr! {"???", xxx, imp, 7},
+    instr! {"cpx", cpx, imm, 2},
+    instr! {"sbc", sbc, izx, 6},
+    instr! {"???", nop, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"cpx", cpx, zp0, 3},
+    instr! {"sbc", sbc, zp0, 3},
+    instr! {"inc", inc, zp0, 5},
+    instr! {"???", xxx, imp, 5},
+    instr! {"inx", inx, imp, 2},
+    instr! {"sbc", sbc, imm, 2},
+    instr! {"nop", nop, imp, 2},
+    instr! {"???", sbc, imp, 2},
+    instr! {"cpx", cpx, abs, 4},
+    instr! {"sbc", sbc, abs, 4},
+    instr! {"inc", inc, abs, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"beq", beq, rel, 2},
+    instr! {"sbc", sbc, izy, 5},
+    instr! {"???", xxx, imp, 2},
+    instr! {"???", xxx, imp, 8},
+    instr! {"???", nop, imp, 4},
+    instr! {"sbc", sbc, zpx, 4},
+    instr! {"inc", inc, zpx, 6},
+    instr! {"???", xxx, imp, 6},
+    instr! {"sed", sed, imp, 2},
+    instr! {"sbc", sbc, aby, 4},
+    instr! {"nop", nop, imp, 2},
+    instr! {"???", xxx, imp, 7},
+    instr! {"???", nop, imp, 4},
+    instr! {"sbc", sbc, abx, 4},
+    instr! {"inc", inc, abx, 7},
+    instr! {"???", xxx, imp, 7},
 ];
 
-fn BRK() {}
+// ##### ADDRESS MODES ####
 
-fn IMP() {}
+fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ABS", cpu.pc);
+
+    match cpu.address_bus.read(cpu.pc) {
+        Ok(lo) => {
+            cpu.pc += 1;
+            match cpu.address_bus.read(cpu.pc) {
+                Ok(hi) => {
+                    cpu.pc += 1;
+                    Ok(AddressModeValues {
+                        absolute_address: (hi as u16) << 8 | lo as u16,
+                        fetched_value: 0,
+                    })
+                }
+                Err(e) => Err(cpu_error),
+            }
+        }
+        Err(e) => Err(cpu_error),
+    }
+}
+
+fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ABX", cpu.pc);
+    Err(cpu_error)
+}
+
+fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ABY", cpu.pc);
+    Err(cpu_error)
+}
+
+fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("IND", cpu.pc);
+    Err(cpu_error)
+}
+
+fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let addr = cpu.pc;
+    cpu.pc += 1;
+    Ok(AddressModeValues {
+        absolute_address: addr,
+        fetched_value: 0,
+    })
+}
+
+fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    Ok(AddressModeValues {
+        absolute_address: 0,
+        fetched_value: cpu.a,
+    })
+}
+
+fn izx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("IZX", cpu.pc);
+    Err(cpu_error)
+}
+
+fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("IZY", cpu.pc);
+    Err(cpu_error)
+}
+
+fn rel(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("REL", cpu.pc);
+    Err(cpu_error)
+}
+
+fn zp0(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ZP0", cpu.pc);
+    Err(cpu_error)
+}
+
+fn zpx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ZPX", cpu.pc);
+    Err(cpu_error)
+}
+
+fn zpy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new("ZPX", cpu.pc);
+    Err(cpu_error)
+}
+
+// ##### OP CODES ####
+
+fn adc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn and(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn asl(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bcc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bcs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn beq(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bit(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bmi(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bne(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bpl(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn brk(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bvc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn bvs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn clc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn cld(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn cli(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn clv(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn cmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn cpx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn cpy(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn dec(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn dex(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn dey(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn eor(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn inc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn inx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn iny(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn jmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn jsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn lda(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn ldx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn ldy(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn lsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn nop(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn ora(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn pha(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn php(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn pla(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn plp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn rol(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn ror(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn rti(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn rts(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sbc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sec(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sed(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sei(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sta(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn stx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn sty(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn tax(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn tay(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn tsx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn txa(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn txs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn tya(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+fn xxx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
+
+// ##### CYCLES ####
 
 pub fn cycle() {
     println!("6502 cycle");
