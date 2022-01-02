@@ -19,14 +19,18 @@ struct AddressModeValues {
     fetched_value: u8,
 }
 
-#[derive(Clone)]
-struct Cpu {
+#[derive(Debug, Clone)]
+struct CpuRegisters {
     a: u8,
     x: u8,
     y: u8,
     pc: u16,
     sp: u8,
     status: u8,
+}
+
+struct Cpu {
+    r: CpuRegisters,
     address_bus: AddressBus,
 }
 
@@ -316,14 +320,14 @@ static OPCODES: [OperationDefinition; 256] = [
 // ##### ADDRESS MODES ####
 
 fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABS", cpu.pc);
+    let cpu_error = CpuError::new("ABS", cpu.r.pc);
 
-    match cpu.address_bus.read(cpu.pc) {
+    match cpu.address_bus.read(cpu.r.pc) {
         Ok(lo) => {
-            cpu.pc += 1;
-            match cpu.address_bus.read(cpu.pc) {
+            cpu.r.pc += 1;
+            match cpu.address_bus.read(cpu.r.pc) {
                 Ok(hi) => {
-                    cpu.pc += 1;
+                    cpu.r.pc += 1;
                     Ok(AddressModeValues {
                         absolute_address: (hi as u16) << 8 | lo as u16,
                         fetched_value: 0,
@@ -337,23 +341,23 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 }
 
 fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABX", cpu.pc);
+    let cpu_error = CpuError::new("ABX", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABY", cpu.pc);
+    let cpu_error = CpuError::new("ABY", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IND", cpu.pc);
+    let cpu_error = CpuError::new("IND", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let addr = cpu.pc;
-    cpu.pc += 1;
+    let addr = cpu.r.pc;
+    cpu.r.pc += 1;
     Ok(AddressModeValues {
         absolute_address: addr,
         fetched_value: 0,
@@ -363,37 +367,37 @@ fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     Ok(AddressModeValues {
         absolute_address: 0,
-        fetched_value: cpu.a,
+        fetched_value: cpu.r.a,
     })
 }
 
 fn izx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IZX", cpu.pc);
+    let cpu_error = CpuError::new("IZX", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IZY", cpu.pc);
+    let cpu_error = CpuError::new("IZY", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn rel(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("REL", cpu.pc);
+    let cpu_error = CpuError::new("REL", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn zp0(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZP0", cpu.pc);
+    let cpu_error = CpuError::new("ZP0", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn zpx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZPX", cpu.pc);
+    let cpu_error = CpuError::new("ZPX", cpu.r.pc);
     Err(cpu_error)
 }
 
 fn zpy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZPX", cpu.pc);
+    let cpu_error = CpuError::new("ZPX", cpu.r.pc);
     Err(cpu_error)
 }
 
