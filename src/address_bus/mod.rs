@@ -30,10 +30,35 @@ pub trait Addressing {
     fn write(&mut self, addr: u16, data: u8);
 }
 
+pub struct AddressingDummy {}
+impl Addressing for AddressingDummy {
+    fn read(&self, _addr: u16) -> u8 {
+        0
+    }
+
+    fn write(&mut self, _addr: u16, _data: u8) {}
+}
+
 pub struct AddressBus {
     block_size: u16,
     block_component_map: HashMap<u16, u16>,
     component_addr: HashMap<u16, Box<dyn Addressing>>,
+}
+
+impl Clone for Box<dyn Addressing> {
+    fn clone(&self) -> Box<dyn Addressing> {
+        Box::new(AddressingDummy {})
+    }
+}
+
+impl Clone for AddressBus {
+    fn clone(&self) -> AddressBus {
+        AddressBus {
+            block_size: self.block_size,
+            block_component_map: self.block_component_map.clone(),
+            component_addr: self.component_addr.clone(),
+        }
+    }
 }
 
 impl AddressBus {

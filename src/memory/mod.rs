@@ -15,6 +15,12 @@ impl Memory {
             mem: Box::new(vec![0u8; size]),
         }
     }
+    pub fn from_vec(offset: u16, v: Vec<u8>) -> Memory {
+        Memory {
+            offset: offset,
+            mem: Box::new(v),
+        }
+    }
 }
 
 impl Addressing for Memory {

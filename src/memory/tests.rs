@@ -8,8 +8,22 @@ fn writes_and_reads_memory() {
     let expected = 42u8;
 
     // act
-    mem.write(10, 42);
+    mem.write(10, expected);
     let actual = mem.read(10);
+
+    // assert
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn read_vec_memory() {
+    // arrange
+    let mut mem = Memory::from_vec(0, vec![0x01, 0x02, 0x03, 0x00]);
+    let expected = 42u8;
+
+    // act
+    mem.write(3, expected);
+    let actual = mem.read(3);
 
     // assert
     assert_eq!(expected, actual);

@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crate::address_bus::AddressBus;
 
 macro_rules! instr {
@@ -16,6 +19,7 @@ struct AddressModeValues {
     fetched_value: u8,
 }
 
+#[derive(Clone)]
 struct Cpu {
     a: u8,
     x: u8,
