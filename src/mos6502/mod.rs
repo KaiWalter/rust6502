@@ -17,6 +17,7 @@ macro_rules! instr {
 struct AddressModeValues {
     absolute_address: u16,
     fetched_value: u8,
+    add_cycles: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -331,6 +332,7 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
                     Ok(AddressModeValues {
                         absolute_address: (hi as u16) << 8 | lo as u16,
                         fetched_value: 0,
+                        add_cycles: 0,
                     })
                 }
                 Err(_e) => Err(cpu_error),
@@ -342,12 +344,58 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 
 fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("ABX", cpu.r.pc);
-    Err(cpu_error)
+
+    match cpu.address_bus.read(cpu.r.pc) {
+        Ok(lo) => {
+            cpu.r.pc += 1;
+            match cpu.address_bus.read(cpu.r.pc) {
+                Ok(hi) => {
+                    cpu.r.pc += 1;
+                    let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.x as u16;
+                    let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
+                        1 // additional cycle when cross-page boundary
+                    } else {
+                        0
+                    };
+                    Ok(AddressModeValues {
+                        absolute_address: abs_addr,
+                        fetched_value: 0,
+                        add_cycles: add_cycles,
+                    })
+                }
+                Err(_e) => Err(cpu_error),
+            }
+        }
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("ABY", cpu.r.pc);
-    Err(cpu_error)
+
+    match cpu.address_bus.read(cpu.r.pc) {
+        Ok(lo) => {
+            cpu.r.pc += 1;
+            match cpu.address_bus.read(cpu.r.pc) {
+                Ok(hi) => {
+                    cpu.r.pc += 1;
+                    let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.y as u16;
+                    let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
+                        1 // additional cycle when cross-page boundary
+                    } else {
+                        0
+                    };
+                    Ok(AddressModeValues {
+                        absolute_address: abs_addr,
+                        fetched_value: 0,
+                        add_cycles: add_cycles,
+                    })
+                }
+                Err(_e) => Err(cpu_error),
+            }
+        }
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
@@ -361,6 +409,7 @@ fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     Ok(AddressModeValues {
         absolute_address: addr,
         fetched_value: 0,
+        add_cycles: 0,
     })
 }
 
@@ -368,6 +417,7 @@ fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     Ok(AddressModeValues {
         absolute_address: 0,
         fetched_value: cpu.r.a,
+        add_cycles: 0,
     })
 }
 
