@@ -9,8 +9,8 @@ fn test_address_mode_abs() {
     let expected: u16 = 0x0302;
     let mem = Memory::from_vec(0, vec![0x01, 0x02, 0x03, 0x00]);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
-    let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0, 3, mem_addr);
+    let mut address_bus = AddressBus::new(4);
+    address_bus.add_component(0, 4, mem_addr);
 
     let mut cpu = Cpu {
         r: CpuRegisters {

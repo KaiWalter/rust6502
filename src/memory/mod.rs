@@ -31,4 +31,8 @@ impl Addressing for Memory {
     fn write(&mut self, addr: u16, data: u8) {
         self.mem[(addr - self.offset) as usize] = data;
     }
+
+    fn len(&self) -> u16 {
+        self.mem.len() as u16
+    }
 }

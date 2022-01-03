@@ -8,7 +8,7 @@ fn writes_and_reads_memory_block_zero() {
     let mem = Memory::new(0, 0x200);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
     let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0, 0x1FF, mem_addr);
+    address_bus.add_component(0, 0x200, mem_addr);
     let addr = 10;
     let expected = 42u8;
 
@@ -28,7 +28,7 @@ fn writes_and_reads_memory_block_one() {
     let mem = Memory::new(0, 0x200);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
     let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0, 0x1FF, mem_addr);
+    address_bus.add_component(0, 0x200, mem_addr);
     let addr = 0x110;
     let expected = 42u8;
 
@@ -48,7 +48,7 @@ fn writes_and_reads_memory_nonzero_offset() {
     let mem = Memory::new(0, 0x200);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
     let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0xF000, 0xF1FF, mem_addr);
+    address_bus.add_component(0xF000, 0x200, mem_addr);
     let addr = 0xF010;
     let expected = 42u8;
 
@@ -68,7 +68,7 @@ fn writes_to_invalid_address() {
     let mem = Memory::new(0, 0x100);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
     let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0, 0x0FF, mem_addr);
+    address_bus.add_component(0, 0x100, mem_addr);
     let addr = 0x1000;
 
     // act
@@ -85,11 +85,26 @@ fn reads_from_invalid_address() {
     let mem = Memory::new(0, 0x100);
     let mem_addr: Box<dyn Addressing> = Box::new(mem);
     let mut address_bus = AddressBus::new(0x100);
-    address_bus.add_component(0, 0x0FF, mem_addr);
+    address_bus.add_component(0, 0x100, mem_addr);
     let addr = 0x1000;
 
     // act
     let actual = address_bus.read(addr);
+
+    // assert
+    assert_eq!(actual.is_ok(), false);
+    assert_eq!(actual.is_err(), true);
+}
+
+#[test]
+fn invalid_mem_block_size() {
+    // arrange
+    let mem = Memory::from_vec(0, vec![0x01, 0x02, 0x03, 0x00]);
+    let mem_addr: Box<dyn Addressing> = Box::new(mem);
+    let mut address_bus = AddressBus::new(0x100);
+
+    // act
+    let actual = address_bus.add_component(0, 0x100, mem_addr);
 
     // assert
     assert_eq!(actual.is_ok(), false);
