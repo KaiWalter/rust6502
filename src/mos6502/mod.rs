@@ -29,9 +29,9 @@ struct CpuRegisters {
     status: u8,
 }
 
-struct Cpu {
+struct Cpu<'a> {
     r: CpuRegisters,
-    address_bus: AddressBus,
+    address_bus: AddressBus<'a>,
 }
 
 #[derive(Debug, Clone)]
@@ -333,10 +333,10 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
                         fetched_value: 0,
                     })
                 }
-                Err(e) => Err(cpu_error),
+                Err(_e) => Err(cpu_error),
             }
         }
-        Err(e) => Err(cpu_error),
+        Err(_e) => Err(cpu_error),
     }
 }
 

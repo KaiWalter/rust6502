@@ -31,14 +31,14 @@ pub trait Addressing {
     fn len(&self) -> u16;
 }
 
-pub struct AddressBus {
+pub struct AddressBus<'a> {
     block_size: u16,
     block_component_map: HashMap<u16, u16>, // map a 1..n blocks to 1 components
-    component_addr: HashMap<u16, Box<dyn Addressing>>, // 1:1 map component to its addressing
+    component_addr: HashMap<u16, &'a mut (dyn Addressing)>, // 1:1 map component to its addressing
 }
 
-impl AddressBus {
-    pub fn new(block_size: u16) -> AddressBus {
+impl<'a> AddressBus<'a> {
+    pub fn new(block_size: u16) -> AddressBus<'a> {
         AddressBus {
             block_size: block_size,
             block_component_map: HashMap::new(),
@@ -50,7 +50,7 @@ impl AddressBus {
         &mut self,
         from_addr: u16,
         size: u16,
-        component: Box<dyn Addressing>,
+        component: &'a mut (dyn Addressing),
     ) -> Result<(), AddressingError> {
         let size_outside_blocks = size % self.block_size;
         let mem_outside_block = component.len() % self.block_size;
