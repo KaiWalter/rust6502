@@ -7,20 +7,21 @@ use crate::address_bus::Addressing;
 
 pub struct Memory {
     offset: u16,
-    mem: Box<Vec<u8>>,
+    mem: Vec<u8>,
 }
 
 impl Memory {
     pub fn new(offset: u16, size: usize) -> Memory {
         Memory {
             offset: offset,
-            mem: Box::new(vec![0u8; size]),
+            mem: vec![0u8; size],
         }
     }
+
     pub fn from_vec(offset: u16, v: Vec<u8>) -> Memory {
         Memory {
             offset: offset,
-            mem: Box::new(v),
+            mem: v,
         }
     }
 
@@ -28,7 +29,7 @@ impl Memory {
         let data = fs::read(filename).expect("could not read file");
         Memory {
             offset: offset,
-            mem: Box::new(data),
+            mem: data,
         }
     }
 }
