@@ -28,3 +28,18 @@ fn read_vec_memory() {
     // assert
     assert_eq!(expected, actual);
 }
+
+#[test]
+fn load_rom() {
+    // arrange
+    let rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.rom".to_string());
+    let expected = 216u8;
+
+    let addr = 0xFF00;
+
+    // act
+    let actual = rom_monitor.read(addr);
+
+    // assert
+    assert_eq!(expected, actual);
+}

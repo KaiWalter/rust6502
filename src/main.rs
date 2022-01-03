@@ -13,6 +13,15 @@ fn main() {
     if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
         panic!("add_component failed");
     }
+
+    let mut rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.rom".to_string());
+    if address_bus
+        .add_component(0xFF00, rom_monitor.len(), &mut (rom_monitor))
+        .is_err()
+    {
+        panic!("add_component failed");
+    }
+
     address_bus
         .write(0x110, 10)
         .expect("accessing wrong address");

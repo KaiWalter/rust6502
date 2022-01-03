@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::fs;
+
 use crate::address_bus::Addressing;
 
 pub struct Memory {
@@ -19,6 +21,14 @@ impl Memory {
         Memory {
             offset: offset,
             mem: Box::new(v),
+        }
+    }
+
+    pub fn load_rom(offset: u16, filename: String) -> Memory {
+        let data = fs::read(filename).expect("could not read file");
+        Memory {
+            offset: offset,
+            mem: Box::new(data),
         }
     }
 }

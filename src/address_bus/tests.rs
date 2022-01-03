@@ -49,16 +49,17 @@ fn writes_and_reads_memory_block_one() {
 #[test]
 fn writes_and_reads_memory_nonzero_offset() {
     // arrange
-    let mut mem = Memory::new(0, 0x200);
+    let offset = 0xF000u16;
+    let mut mem = Memory::new(offset, 0x200);
     let mut address_bus = AddressBus::new(0x100);
     if address_bus
-        .add_component(0xF000, mem.len(), &mut (mem))
+        .add_component(offset, mem.len(), &mut (mem))
         .is_err()
     {
         panic!("add_component failed");
     }
 
-    let addr = 0xF010;
+    let addr = offset + 10;
     let expected = 42u8;
 
     // act
@@ -121,4 +122,26 @@ fn invalid_mem_block_size() {
     // assert
     assert_eq!(actual.is_ok(), false);
     assert_eq!(actual.is_err(), true);
+}
+
+#[test]
+fn load_rom() {
+    // arrange
+    let mut rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.rom".to_string());
+    let mut address_bus = AddressBus::new(0x100);
+    if address_bus
+        .add_component(0xFF00, rom_monitor.len(), &mut (rom_monitor))
+        .is_err()
+    {
+        panic!("add_component failed");
+    }
+
+    let addr = 0xFF00;
+
+    // act
+    let actual = address_bus.read(addr);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
 }
