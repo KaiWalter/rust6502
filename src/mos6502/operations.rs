@@ -3,7 +3,7 @@ use crate::mos6502::*;
 
 fn fetch(cpu: &Cpu, address_mode_values: AddressModeValues) -> u8 {
     match address_mode_values.result {
-        AddressModeResult::absolute => {
+        AddressModeResult::Absolute => {
             match cpu.address_bus.read(address_mode_values.absolute_address) {
                 Ok(fetched) => fetched,
                 Err(_e) => panic!(
@@ -12,100 +12,437 @@ fn fetch(cpu: &Cpu, address_mode_values: AddressModeValues) -> u8 {
                 ),
             }
         }
-        AddressModeResult::fetched => address_mode_values.fetched_value,
-        AddressModeResult::relative => panic!("it is not intended to fetch relative address"),
+        AddressModeResult::Fetched => address_mode_values.fetched_value,
+        AddressModeResult::Relative => panic!("it is not intended to fetch relative address"),
     }
 }
 
-pub fn adc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
+fn absolute_sp(cpu: &Cpu) -> u16 {
+    0x0100 + (cpu.r.sp as u16)
 }
-pub fn and(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
+
+// ----------------------------------------------------------------------------
+
+pub fn adc(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+
+    let carry = if cpu.get_flag(StatusFlag::C) {
+        1u16
+    } else {
+        0u16
+    };
+
+    if cpu.get_flag(StatusFlag::D) {
+        let mut temp = (cpu.r.a as u16 & 0x0F) + (fetched & 0x0F) + carry;
+        if temp > 9 {
+            temp += 6;
+        }
+
+        if temp < 0x0F {
+            temp = temp & 0x0F + (cpu.r.a as u16 & 0xF0) + (fetched & 0xF0);
+        } else {
+            temp = temp & 0x0F + (cpu.r.a as u16 & 0xF0) + (fetched & 0xF0) + 0x10;
+        }
+
+        cpu.set_flag(
+            StatusFlag::Z,
+            (cpu.r.a as u16 + fetched + carry) & 0xFF == 0,
+        );
+        cpu.set_flag(StatusFlag::N, temp & 0x80 != 0);
+        cpu.set_flag(
+            StatusFlag::V,
+            (cpu.r.a as u16 ^ fetched) & 0x0080 != 0 && (cpu.r.a as u16 ^ temp) & 0x0080 != 0,
+        );
+
+        if temp & 0x1f0 > 0x90 {
+            temp += 0x60
+        }
+
+        cpu.set_flag(StatusFlag::C, temp > 0xF0);
+        cpu.r.a = (temp & 0x00FF) as u8;
+    } else {
+        let temp = cpu.r.a as u16 + fetched + carry;
+
+        cpu.set_flag(StatusFlag::Z, temp & 0xFF == 0);
+        cpu.set_flag(StatusFlag::N, temp & 0x80 != 0);
+        cpu.set_flag(
+            StatusFlag::V,
+            ((!(cpu.r.a as u16 ^ fetched)) & (cpu.r.a as u16 ^ temp)) & 0x0080 != 0,
+        );
+        cpu.set_flag(StatusFlag::C, temp > 0xFF);
+        cpu.r.a = (temp & 0x00FF) as u8;
+    }
+
+    1
 }
-pub fn asl(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bcc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bcs(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn beq(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bit(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bmi(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bne(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bpl(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn brk(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bvc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn bvs(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn clc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn cld(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn cli(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn clv(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn cmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn cpx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn cpy(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn dec(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn dex(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn dey(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn eor(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn inc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn inx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn iny(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn jmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn jsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn and(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+
+    cpu.r.a &= fetched;
+
+    cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
+
     0
 }
 
-pub fn lda(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+pub fn asl(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+
+    let temp = fetched << 1;
+
+    cpu.set_flag(StatusFlag::C, fetched & 0xFF00 > 0);
+    cpu.set_flag(StatusFlag::Z, temp & 0xFF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x80 != 0);
+
+    match address_mode_values.result {
+        AddressModeResult::Absolute => match cpu
+            .address_bus
+            .write(address_mode_values.absolute_address, (temp & 0xFF) as u8)
+        {
+            Ok(_) => 0,
+            Err(_e) => panic!(
+                "addressing error {:X}",
+                address_mode_values.absolute_address
+            ),
+        },
+        AddressModeResult::Fetched => {
+            cpu.r.a = (temp & 0xFF) as u8;
+            0
+        }
+        AddressModeResult::Relative => panic!("it is not intended to fetch relative address"),
+    }
+}
+
+pub fn bcc(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if !cpu.get_flag(StatusFlag::C) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn bcs(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if cpu.get_flag(StatusFlag::C) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn beq(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if cpu.get_flag(StatusFlag::Z) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn bit(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+    let temp = (cpu.r.a & fetched) as u16;
+
+    cpu.set_flag(StatusFlag::Z, temp & 0xFF == 0);
+    cpu.set_flag(StatusFlag::N, temp & (1 << 7) != 0);
+    cpu.set_flag(StatusFlag::V, temp & (1 << 6) != 0);
+
+    0
+}
+
+pub fn bmi(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if cpu.get_flag(StatusFlag::N) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn bne(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if !cpu.get_flag(StatusFlag::Z) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn bpl(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if !cpu.get_flag(StatusFlag::N) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn brk(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu
+        .address_bus
+        .write(absolute_sp(cpu), ((cpu.r.pc >> 8) & 0x00FF) as u8)
+    {
+        Ok(_) => {
+            cpu.r.sp -= 1;
+            match cpu
+                .address_bus
+                .write(absolute_sp(cpu), (cpu.r.pc & 0x00FF) as u8)
+            {
+                Ok(_) => {
+                    cpu.r.sp -= 1;
+                    cpu.set_flag(StatusFlag::B, true);
+                    match cpu.address_bus.write(absolute_sp(cpu), cpu.r.status) {
+                        Ok(_) => {
+                            cpu.r.sp -= 1;
+                            cpu.set_flag(StatusFlag::I, true);
+                            cpu.set_flag(StatusFlag::B, false);
+                            match cpu.address_bus.read(0xFFFF) {
+                                Ok(hi) => {
+                                    cpu.r.pc = (hi as u16) << 8;
+                                    match cpu.address_bus.read(0xFFFE) {
+                                        Ok(lo) => {
+                                            cpu.r.pc |= lo as u16;
+                                            0
+                                        }
+                                        Err(e) => panic!("addressing error {}", e),
+                                    }
+                                }
+                                Err(e) => panic!("addressing error {}", e),
+                            }
+                        }
+                        Err(e) => panic!("addressing error {}", e),
+                    }
+                }
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        Err(e) => panic!("addressing error {}", e),
+    };
+    0
+}
+
+pub fn bvc(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if !cpu.get_flag(StatusFlag::V) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+pub fn bvs(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let mut cycles = 0u8;
+
+    if cpu.get_flag(StatusFlag::V) {
+        cycles += 1;
+        let abs_addr = cpu.r.pc + address_mode_values.relative_address as u16;
+        if abs_addr & 0xFF00 != cpu.r.pc & 0xFF00 {
+            cycles += 1;
+        }
+        cpu.r.pc = abs_addr;
+    }
+
+    cycles
+}
+
+pub fn clc(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::C, false);
+    0
+}
+
+pub fn cld(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::D, false);
+    0
+}
+
+pub fn cli(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::I, false);
+    0
+}
+
+pub fn clv(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::V, false);
+    0
+}
+
+pub fn cmp(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+    let temp = cpu.r.a as u16 - fetched;
+    cpu.set_flag(StatusFlag::C, cpu.r.a as u16 >= temp);
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+    0
+}
+
+pub fn cpx(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+    let temp = cpu.r.x as u16 - fetched;
+    cpu.set_flag(StatusFlag::C, cpu.r.x as u16 >= temp);
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+    0
+}
+
+pub fn cpy(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+    let temp = cpu.r.y as u16 - fetched;
+    cpu.set_flag(StatusFlag::C, cpu.r.y as u16 >= temp);
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+    0
+}
+
+pub fn dec(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+    let temp = fetched - 1;
+    match cpu
+        .address_bus
+        .write(address_mode_values.absolute_address, (temp & 0x00FF) as u8)
+    {
+        Ok(_) => {
+            cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+            cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
+    0
+}
+
+pub fn dex(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.x -= 1;
+    cpu.set_flag(StatusFlag::Z, cpu.r.x == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.x & 0x80 != 0);
+
+    0
+}
+
+pub fn dey(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.y -= 1;
+    cpu.set_flag(StatusFlag::Z, cpu.r.y == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.y & 0x80 != 0);
+
+    0
+}
+
+pub fn eor(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+
+    cpu.r.a ^= fetched;
+
+    cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
+
+    0
+}
+
+pub fn inc(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+    let temp = fetched + 1;
+    match cpu
+        .address_bus
+        .write(address_mode_values.absolute_address, (temp & 0x00FF) as u8)
+    {
+        Ok(_) => {
+            cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+            cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
+    0
+}
+
+pub fn inx(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.x += 1;
+    cpu.set_flag(StatusFlag::Z, cpu.r.x == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.x & 0x80 != 0);
+
+    0
+}
+
+pub fn iny(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.y += 1;
+    cpu.set_flag(StatusFlag::Z, cpu.r.y == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.y & 0x80 != 0);
+
+    0
+}
+
+pub fn jmp(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.pc = address_mode_values.absolute_address;
+    0
+}
+
+pub fn jsr(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.pc -= 1;
+
+    match cpu
+        .address_bus
+        .write(absolute_sp(cpu), ((cpu.r.pc >> 8) & 0x00FF) as u8)
+    {
+        Ok(_) => {
+            cpu.r.sp -= 1;
+            match cpu
+                .address_bus
+                .write(absolute_sp(cpu), (cpu.r.pc & 0x00FF) as u8)
+            {
+                Ok(_) => {
+                    cpu.r.sp -= 1;
+                    cpu.r.pc = address_mode_values.absolute_address;
+                }
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        Err(e) => panic!("addressing error {}", e),
+    };
+
+    0
+}
+
+pub fn lda(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
     cpu.r.a = fetch(cpu, address_mode_values);
     cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
     cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
@@ -113,84 +450,317 @@ pub fn lda(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
     0
 }
 
-pub fn ldx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+pub fn ldx(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.x = fetch(cpu, address_mode_values);
+    cpu.set_flag(StatusFlag::Z, cpu.r.x == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.x & 0x80 != 0);
+
     0
 }
-pub fn ldy(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn ldy(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.y = fetch(cpu, address_mode_values);
+    cpu.set_flag(StatusFlag::Z, cpu.r.y == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.y & 0x80 != 0);
+
     0
 }
-pub fn lsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn lsr(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+
+    cpu.set_flag(StatusFlag::C, fetched & 0x01 != 0);
+    let temp = fetched as u16 >> 1;
+
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+
+    match address_mode_values.result {
+        AddressModeResult::Absolute => {
+            match cpu
+                .address_bus
+                .write(address_mode_values.absolute_address, (temp & 0x00FF) as u8)
+            {
+                Ok(_) => {}
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        AddressModeResult::Fetched => {
+            cpu.r.a = (temp & 0xFF) as u8;
+        }
+        AddressModeResult::Relative => panic!("it is not intended to fetch relative address"),
+    }
     0
 }
-pub fn nop(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn nop(_cpu: &mut Cpu, _address_mode_values: AddressModeValues, opcode: u8) -> u8 {
+    // TODO: check in other emulators, these codes are not mapped to this opcode
+    match opcode {
+        0x1C | 0x3C | 0x5C | 0x7C | 0xDC | 0xFC => 1,
+        _ => 0,
+    }
+}
+
+pub fn ora(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+    cpu.r.a |= fetched;
+    cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
     0
 }
-pub fn ora(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn pha(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu.address_bus.write(absolute_sp(cpu), cpu.r.a) {
+        Ok(_) => {
+            cpu.r.sp -= 1;
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn pha(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn php(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu.address_bus.write(
+        absolute_sp(cpu),
+        cpu.r.status | StatusFlag::B as u8 | StatusFlag::U as u8,
+    ) {
+        Ok(_) => {
+            cpu.set_flag(StatusFlag::B, false);
+            cpu.r.sp -= 1;
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn php(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn pla(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.sp += 1;
+    match cpu.address_bus.read(absolute_sp(cpu)) {
+        Ok(value) => {
+            cpu.r.a = value;
+            cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+            cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn pla(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn plp(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.sp += 1;
+    match cpu.address_bus.read(absolute_sp(cpu)) {
+        Ok(value) => {
+            cpu.r.status = value;
+            cpu.set_flag(StatusFlag::U, true);
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn plp(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn rol(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+    let carry = if cpu.get_flag(StatusFlag::C) { 1 } else { 0 };
+    let temp = (fetched as u16) << 1 | carry;
+    cpu.set_flag(StatusFlag::C, temp & 0xFF00 != 0);
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+
+    match address_mode_values.result {
+        AddressModeResult::Absolute => {
+            match cpu
+                .address_bus
+                .write(address_mode_values.absolute_address, (temp & 0x00FF) as u8)
+            {
+                Ok(_) => {}
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        AddressModeResult::Fetched => {
+            cpu.r.a = (temp & 0xFF) as u8;
+        }
+        AddressModeResult::Relative => panic!("it is not intended to fetch relative address"),
+    }
     0
 }
-pub fn rol(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn ror(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values);
+    let carry = if cpu.get_flag(StatusFlag::C) { 1 } else { 0 };
+    let temp = (fetched as u16) >> 1 | carry << 7;
+    cpu.set_flag(StatusFlag::C, fetched & 0x01 != 0);
+    cpu.set_flag(StatusFlag::Z, temp & 0x00FF == 0);
+    cpu.set_flag(StatusFlag::N, temp & 0x0080 != 0);
+
+    match address_mode_values.result {
+        AddressModeResult::Absolute => {
+            match cpu
+                .address_bus
+                .write(address_mode_values.absolute_address, (temp & 0x00FF) as u8)
+            {
+                Ok(_) => {}
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        AddressModeResult::Fetched => {
+            cpu.r.a = (temp & 0xFF) as u8;
+        }
+        AddressModeResult::Relative => panic!("it is not intended to fetch relative address"),
+    }
     0
 }
-pub fn ror(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn rti(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.sp += 1;
+    match cpu.address_bus.read(absolute_sp(cpu)) {
+        Ok(value) => {
+            cpu.r.status = value;
+            cpu.set_flag(StatusFlag::B, false);
+            cpu.set_flag(StatusFlag::U, false);
+            rts(cpu, _address_mode_values, _opcode);
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn rti(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn rts(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.sp += 1;
+    match cpu.address_bus.read(absolute_sp(cpu)) {
+        Ok(lo) => {
+            cpu.r.pc = lo as u16;
+            cpu.r.sp += 1;
+            match cpu.address_bus.read(absolute_sp(cpu)) {
+                Ok(hi) => {
+                    cpu.r.pc |= (hi as u16) << 8;
+                }
+                Err(e) => panic!("addressing error {}", e),
+            }
+        }
+        Err(e) => panic!("addressing error {}", e),
+    }
     0
 }
-pub fn rts(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn sbc(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    let fetched = fetch(cpu, address_mode_values) as u16;
+
+    let carry = if cpu.get_flag(StatusFlag::C) {
+        1u16
+    } else {
+        0u16
+    };
+
+    let temp_bin = cpu.r.a as u16 - fetched - (1 - carry);
+
+    if cpu.get_flag(StatusFlag::D) {
+        let mut temp_bcd = (cpu.r.a as u16 & 0x0F) - (fetched & 0x0F) - (1 - carry);
+        if temp_bcd & 0x0010 != 0 {
+            temp_bcd = ((temp_bcd - 0x06) & 0x0F)
+                | ((cpu.r.a as u16 - 0x0A) & 0x0F0) - (fetched & 0x0F0) - 0x10;
+        } else {
+            temp_bcd = (temp_bcd & 0x0F) | (cpu.r.a as u16 & 0x0F0) - (fetched & 0x0F0);
+        }
+
+        if temp_bcd & 0x0100 != 0 {
+            temp_bcd -= 0x60;
+        }
+
+        cpu.r.a = (temp_bcd & 0xFF) as u8;
+    } else {
+        cpu.r.a = (temp_bin & 0xFF) as u8;
+    }
+
+    cpu.set_flag(StatusFlag::C, temp_bin < 0x0100);
+    cpu.set_flag(StatusFlag::Z, temp_bin & 0xFF == 0);
+    cpu.set_flag(StatusFlag::N, temp_bin & 0x80 != 0);
+
+    1
+}
+
+pub fn sec(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::C, true);
     0
 }
-pub fn sbc(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn sed(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::D, true);
     0
 }
-pub fn sec(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn sei(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.set_flag(StatusFlag::I, true);
     0
 }
-pub fn sed(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn sta(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu
+        .address_bus
+        .write(address_mode_values.absolute_address, cpu.r.a)
+    {
+        Ok(()) => 0,
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn stx(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu
+        .address_bus
+        .write(address_mode_values.absolute_address, cpu.r.x)
+    {
+        Ok(()) => 0,
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn sty(cpu: &mut Cpu, address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    match cpu
+        .address_bus
+        .write(address_mode_values.absolute_address, cpu.r.y)
+    {
+        Ok(()) => 0,
+        Err(err) => panic!("{}", err),
+    }
+}
+
+pub fn tax(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.x = cpu.r.a;
+    cpu.set_flag(StatusFlag::Z, cpu.r.x == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.x & 0x80 != 0);
     0
 }
-pub fn sei(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn tay(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.y = cpu.r.a;
+    cpu.set_flag(StatusFlag::Z, cpu.r.y == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.y & 0x80 != 0);
     0
 }
-pub fn sta(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn tsx(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.x = cpu.r.sp;
+    cpu.set_flag(StatusFlag::Z, cpu.r.x == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.x & 0x80 != 0);
     0
 }
-pub fn stx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+pub fn txa(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.a = cpu.r.x;
+    cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
     0
 }
-pub fn sty(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn txs(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.sp = cpu.r.x;
     0
 }
-pub fn tax(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+pub fn tya(cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
+    cpu.r.a = cpu.r.y;
+    cpu.set_flag(StatusFlag::Z, cpu.r.a == 0);
+    cpu.set_flag(StatusFlag::N, cpu.r.a & 0x80 != 0);
     0
 }
-pub fn tay(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn tsx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn txa(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn txs(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn tya(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
-    0
-}
-pub fn xxx(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
+
+pub fn xxx(_cpu: &mut Cpu, _address_mode_values: AddressModeValues, _opcode: u8) -> u8 {
     0
 }
