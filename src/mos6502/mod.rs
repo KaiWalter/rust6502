@@ -16,6 +16,7 @@ macro_rules! instr {
 
 struct AddressModeValues {
     absolute_address: u16,
+    relative_address: u16,
     fetched_value: u8,
     add_cycles: u8,
 }
@@ -337,6 +338,7 @@ fn from_pc_word(cpu: &mut Cpu, operation: &str, index: u8) -> Result<AddressMode
                     };
                     Ok(AddressModeValues {
                         absolute_address: abs_addr,
+                        relative_address: 0,
                         fetched_value: 0,
                         add_cycles: add_cycles,
                     })
@@ -355,6 +357,7 @@ fn from_pc_byte(cpu: &mut Cpu, operation: &str) -> Result<AddressModeValues, Cpu
             cpu.r.pc += 1;
             Ok(AddressModeValues {
                 absolute_address: abs_addr as u16,
+                relative_address: 0,
                 fetched_value: 0,
                 add_cycles: 0,
             })
@@ -391,6 +394,7 @@ fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
                     match cpu.address_bus.read(abs_addr) {
                         Ok(hi) => Ok(AddressModeValues {
                             absolute_address: (hi as u16) << 8 | lo as u16,
+                            relative_address: 0,
                             fetched_value: 0,
                             add_cycles: 0,
                         }),
@@ -409,6 +413,7 @@ fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     cpu.r.pc += 1;
     Ok(AddressModeValues {
         absolute_address: addr,
+        relative_address: 0,
         fetched_value: 0,
         add_cycles: 0,
     })
@@ -417,6 +422,7 @@ fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     Ok(AddressModeValues {
         absolute_address: 0,
+        relative_address: 0,
         fetched_value: cpu.r.a,
         add_cycles: 0,
     })
@@ -426,12 +432,13 @@ fn izx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("IZX", cpu.r.pc);
 
     match from_pc_byte(cpu, "IZX") {
-        Ok(temp_address) => {
-            let indexed_address = temp_address.absolute_address as u16 + cpu.r.x as u16;
+        Ok(result) => {
+            let indexed_address = result.absolute_address as u16 + cpu.r.x as u16;
             match cpu.address_bus.read(indexed_address & 0x00FF) {
                 Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
                     Ok(hi) => Ok(AddressModeValues {
                         absolute_address: (hi as u16) << 8 | lo as u16,
+                        relative_address: 0,
                         fetched_value: 0,
                         add_cycles: 0,
                     }),
@@ -448,8 +455,8 @@ fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("IZY", cpu.r.pc);
 
     match from_pc_byte(cpu, "IZY") {
-        Ok(temp_address) => {
-            let indexed_address = temp_address.absolute_address as u16;
+        Ok(result) => {
+            let indexed_address = result.absolute_address as u16;
             match cpu.address_bus.read(indexed_address & 0x00FF) {
                 Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
                     Ok(hi) => {
@@ -461,6 +468,7 @@ fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
                         };
                         Ok(AddressModeValues {
                             absolute_address: abs_addr,
+                            relative_address: 0,
                             fetched_value: 0,
                             add_cycles: add_cycles,
                         })
@@ -476,22 +484,60 @@ fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 
 fn rel(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("REL", cpu.r.pc);
-    Err(cpu_error)
+    match from_pc_byte(cpu, "REL") {
+        Ok(result) => {
+            let mut rel_address = result.absolute_address as u16;
+            if rel_address & 0x80 != 0 {
+                rel_address |= 0xFF00
+            }
+            Ok(AddressModeValues {
+                absolute_address: 0,
+                relative_address: rel_address,
+                fetched_value: 0,
+                add_cycles: 0,
+            })
+        }
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn zp0(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("ZP0", cpu.r.pc);
-    Err(cpu_error)
+    match from_pc_byte(cpu, "ZP0") {
+        Ok(result) => Ok(AddressModeValues {
+            absolute_address: result.absolute_address as u16 & 0x00FF,
+            relative_address: 0,
+            fetched_value: 0,
+            add_cycles: 0,
+        }),
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn zpx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("ZPX", cpu.r.pc);
-    Err(cpu_error)
+    match from_pc_byte(cpu, "ZPX") {
+        Ok(result) => Ok(AddressModeValues {
+            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.x as u16,
+            relative_address: 0,
+            fetched_value: 0,
+            add_cycles: 0,
+        }),
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn zpy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZPX", cpu.r.pc);
-    Err(cpu_error)
+    let cpu_error = CpuError::new("ZPY", cpu.r.pc);
+    match from_pc_byte(cpu, "ZPY") {
+        Ok(result) => Ok(AddressModeValues {
+            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.y as u16,
+            relative_address: 0,
+            fetched_value: 0,
+            add_cycles: 0,
+        }),
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 // ##### OP CODES ####

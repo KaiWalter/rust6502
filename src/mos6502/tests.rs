@@ -322,3 +322,139 @@ fn test_address_mode_izy() {
     assert_eq!(expected, actual.unwrap().absolute_address);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
+
+#[test]
+fn test_address_mode_rel() {
+    // arrange
+    let expected: u16 = 0x06;
+    let mut mem = Memory::from_vec(0, vec![0, 0x06, 0, 0, 0, 0, 0x01, 0x02]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: 1,
+            sp: 0,
+            status: 0,
+        },
+        address_bus: address_bus,
+    };
+
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    let actual = rel(&mut cpu);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap().relative_address);
+    assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
+}
+
+#[test]
+fn test_address_mode_zp0() {
+    // arrange
+    let expected: u16 = 0x06;
+    let mut mem = Memory::from_vec(0, vec![0, 0x06, 0, 0, 0, 0, 0x01, 0x02]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: 1,
+            sp: 0,
+            status: 0,
+        },
+        address_bus: address_bus,
+    };
+
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    let actual = zp0(&mut cpu);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap().absolute_address);
+    assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
+}
+
+#[test]
+fn test_address_mode_zpx() {
+    // arrange
+    let expected: u16 = 0x07;
+    let mut mem = Memory::from_vec(0, vec![0, 0x06, 0, 0, 0, 0, 0x01, 0x02]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 1,
+            y: 0,
+            pc: 1,
+            sp: 0,
+            status: 0,
+        },
+        address_bus: address_bus,
+    };
+
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    let actual = zpx(&mut cpu);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap().absolute_address);
+    assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
+}
+
+#[test]
+fn test_address_mode_zpy() {
+    // arrange
+    let expected: u16 = 0x08;
+    let mut mem = Memory::from_vec(0, vec![0, 0x06, 0, 0, 0, 0, 0x01, 0x02]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 0,
+            y: 2,
+            pc: 1,
+            sp: 0,
+            status: 0,
+        },
+        address_bus: address_bus,
+    };
+
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    let actual = zpy(&mut cpu);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap().absolute_address);
+    assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
+}
