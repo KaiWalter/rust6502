@@ -323,6 +323,32 @@ static OPCODES: [OperationDefinition; 256] = [
     instr! {"???", xxx, imp, 7},
 ];
 
+// ##### FLAGS ####
+
+enum StatusFlag {
+    C = (1 << 0), // Carry Bit
+    Z = (1 << 1), // Zero
+    I = (1 << 2), // Disable Interrupts
+    D = (1 << 3), // Decimal Mode
+    B = (1 << 4), // Break
+    U = (1 << 5), // Unused
+    V = (1 << 6), // Overflow
+    N = (1 << 7), // Negative
+}
+
+impl<'a> Cpu<'a> {
+    pub fn set_flag(&mut self, flag: StatusFlag, value: bool) {
+        if value {
+            self.r.status |= flag as u8
+        } else {
+            self.r.status &= !(flag as u8);
+        }
+    }
+    pub fn get_flag(&mut self, flag: StatusFlag) -> bool {
+        (self.r.status & flag as u8) != 0
+    }
+}
+
 // ##### CYCLES ####
 
 pub fn cycle() {

@@ -458,3 +458,69 @@ fn test_address_mode_zpy() {
     assert_eq!(expected, actual.unwrap().absolute_address);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
+
+#[test]
+fn test_set_flags() {
+    // arrange
+    let expected: u8 = StatusFlag::D as u8 | StatusFlag::C as u8;
+    let mut mem = Memory::from_vec(0, vec![0]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: 0,
+            sp: 0,
+            status: 0,
+        },
+        address_bus: address_bus,
+    };
+
+    // act
+    cpu.set_flag(StatusFlag::D, true);
+    cpu.set_flag(StatusFlag::C, true);
+
+    // assert
+    assert_eq!(expected, cpu.r.status);
+    assert_eq!(true, cpu.get_flag(StatusFlag::D));
+    assert_eq!(true, cpu.get_flag(StatusFlag::C));
+    assert_eq!(false, cpu.get_flag(StatusFlag::Z));
+}
+
+#[test]
+fn test_clear_flags() {
+    // arrange
+    let expected: u8 = 0xFF & !(StatusFlag::D as u8 | StatusFlag::C as u8);
+    let mut mem = Memory::from_vec(0, vec![0]);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu {
+        r: CpuRegisters {
+            a: 0,
+            x: 0,
+            y: 0,
+            pc: 0,
+            sp: 0,
+            status: 0xFF,
+        },
+        address_bus: address_bus,
+    };
+
+    // act
+    cpu.set_flag(StatusFlag::D, false);
+    cpu.set_flag(StatusFlag::C, false);
+
+    // assert
+    assert_eq!(expected, cpu.r.status);
+    assert_eq!(false, cpu.get_flag(StatusFlag::D));
+    assert_eq!(false, cpu.get_flag(StatusFlag::C));
+    assert_eq!(true, cpu.get_flag(StatusFlag::Z));
+}
