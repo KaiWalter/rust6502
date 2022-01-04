@@ -320,8 +320,8 @@ static OPCODES: [OperationDefinition; 256] = [
 
 // ##### ADDRESS MODES ####
 
-fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABS", cpu.r.pc);
+fn from_pc_word(cpu: &mut Cpu, operation: &str, index: u8) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new(operation, cpu.r.pc);
 
     match cpu.address_bus.read(cpu.r.pc) {
         Ok(lo) => {
@@ -329,10 +329,16 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
             match cpu.address_bus.read(cpu.r.pc) {
                 Ok(hi) => {
                     cpu.r.pc += 1;
+                    let abs_addr = ((hi as u16) << 8 | lo as u16) + index as u16;
+                    let add_cycles = if index > 0 && ((abs_addr & 0xFF00) != ((hi as u16) << 8)) {
+                        1 // additional cycle when cross-page boundary
+                    } else {
+                        0
+                    };
                     Ok(AddressModeValues {
-                        absolute_address: (hi as u16) << 8 | lo as u16,
+                        absolute_address: abs_addr,
                         fetched_value: 0,
-                        add_cycles: 0,
+                        add_cycles: add_cycles,
                     })
                 }
                 Err(_e) => Err(cpu_error),
@@ -340,67 +346,62 @@ fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
         }
         Err(_e) => Err(cpu_error),
     }
+}
+
+fn from_pc_byte(cpu: &mut Cpu, operation: &str) -> Result<AddressModeValues, CpuError> {
+    let cpu_error = CpuError::new(operation, cpu.r.pc);
+    match cpu.address_bus.read(cpu.r.pc) {
+        Ok(abs_addr) => {
+            cpu.r.pc += 1;
+            Ok(AddressModeValues {
+                absolute_address: abs_addr as u16,
+                fetched_value: 0,
+                add_cycles: 0,
+            })
+        }
+        Err(_e) => Err(cpu_error),
+    }
+}
+
+fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
+    return from_pc_word(cpu, "ABS", 0);
 }
 
 fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABX", cpu.r.pc);
-
-    match cpu.address_bus.read(cpu.r.pc) {
-        Ok(lo) => {
-            cpu.r.pc += 1;
-            match cpu.address_bus.read(cpu.r.pc) {
-                Ok(hi) => {
-                    cpu.r.pc += 1;
-                    let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.x as u16;
-                    let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
-                        1 // additional cycle when cross-page boundary
-                    } else {
-                        0
-                    };
-                    Ok(AddressModeValues {
-                        absolute_address: abs_addr,
-                        fetched_value: 0,
-                        add_cycles: add_cycles,
-                    })
-                }
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(_e) => Err(cpu_error),
-    }
+    return from_pc_word(cpu, "ABX", cpu.r.x);
 }
 
 fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ABY", cpu.r.pc);
-
-    match cpu.address_bus.read(cpu.r.pc) {
-        Ok(lo) => {
-            cpu.r.pc += 1;
-            match cpu.address_bus.read(cpu.r.pc) {
-                Ok(hi) => {
-                    cpu.r.pc += 1;
-                    let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.y as u16;
-                    let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
-                        1 // additional cycle when cross-page boundary
-                    } else {
-                        0
-                    };
-                    Ok(AddressModeValues {
-                        absolute_address: abs_addr,
-                        fetched_value: 0,
-                        add_cycles: add_cycles,
-                    })
-                }
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(_e) => Err(cpu_error),
-    }
+    return from_pc_word(cpu, "ABY", cpu.r.y);
 }
 
 fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("IND", cpu.r.pc);
-    Err(cpu_error)
+
+    match from_pc_word(cpu, "IND", 0) {
+        Ok(pointer) => {
+            let mut abs_addr = pointer.absolute_address;
+            match cpu.address_bus.read(abs_addr) {
+                Ok(lo) => {
+                    if abs_addr & 0x00FF == 0x00FF {
+                        abs_addr = abs_addr & 0xFF00
+                    } else {
+                        abs_addr += 1
+                    }
+                    match cpu.address_bus.read(abs_addr) {
+                        Ok(hi) => Ok(AddressModeValues {
+                            absolute_address: (hi as u16) << 8 | lo as u16,
+                            fetched_value: 0,
+                            add_cycles: 0,
+                        }),
+                        Err(_e) => Err(cpu_error),
+                    }
+                }
+                Err(_e) => Err(cpu_error),
+            }
+        }
+        Err(cpu_error) => Err(cpu_error),
+    }
 }
 
 fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
@@ -423,12 +424,54 @@ fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
 
 fn izx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("IZX", cpu.r.pc);
-    Err(cpu_error)
+
+    match from_pc_byte(cpu, "IZX") {
+        Ok(temp_address) => {
+            let indexed_address = temp_address.absolute_address as u16 + cpu.r.x as u16;
+            match cpu.address_bus.read(indexed_address & 0x00FF) {
+                Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
+                    Ok(hi) => Ok(AddressModeValues {
+                        absolute_address: (hi as u16) << 8 | lo as u16,
+                        fetched_value: 0,
+                        add_cycles: 0,
+                    }),
+                    Err(_e) => Err(cpu_error),
+                },
+                Err(_e) => Err(cpu_error),
+            }
+        }
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     let cpu_error = CpuError::new("IZY", cpu.r.pc);
-    Err(cpu_error)
+
+    match from_pc_byte(cpu, "IZY") {
+        Ok(temp_address) => {
+            let indexed_address = temp_address.absolute_address as u16;
+            match cpu.address_bus.read(indexed_address & 0x00FF) {
+                Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
+                    Ok(hi) => {
+                        let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.y as u16;
+                        let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
+                            1 // additional cycle when cross-page boundary
+                        } else {
+                            0
+                        };
+                        Ok(AddressModeValues {
+                            absolute_address: abs_addr,
+                            fetched_value: 0,
+                            add_cycles: add_cycles,
+                        })
+                    }
+                    Err(_e) => Err(cpu_error),
+                },
+                Err(_e) => Err(cpu_error),
+            }
+        }
+        Err(_e) => Err(cpu_error),
+    }
 }
 
 fn rel(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
