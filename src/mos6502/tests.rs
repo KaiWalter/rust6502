@@ -3,6 +3,8 @@ use super::*;
 use crate::address_bus::*;
 use crate::memory::*;
 
+// ##### ADDRESS MODES ####
+
 #[test]
 fn test_address_mode_abs() {
     // arrange
@@ -13,17 +15,8 @@ fn test_address_mode_abs() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -49,17 +42,9 @@ fn test_address_mode_abx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 2,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
+    cpu.r.x = 2;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -85,17 +70,9 @@ fn test_address_mode_abx_cross_page() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 3,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
+    cpu.r.x = 3;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -122,17 +99,9 @@ fn test_address_mode_aby() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 3,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
+    cpu.r.y = 3;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -157,17 +126,8 @@ fn test_address_mode_abs_addr_error() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 0x100,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 0x100;
 
     // act
     let actual = abs(&mut cpu);
@@ -187,17 +147,8 @@ fn test_address_mode_ind() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 3,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 3;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -217,17 +168,8 @@ fn test_address_mode_ind() {
 fn test_address_mode_imm() {
     // arrange
     let expected: u16 = 0x1234;
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: expected,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: AddressBus::new(0x0),
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x0));
+    cpu.r.pc = expected;
 
     // act
     let actual = imm(&mut cpu);
@@ -245,17 +187,8 @@ fn test_address_mode_imm() {
 fn test_address_mode_imp() {
     // arrange
     let expected: u8 = 0x12;
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: expected,
-            x: 0,
-            y: 0,
-            pc: 0,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: AddressBus::new(0x0),
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x0));
+    cpu.r.a = expected;
 
     // act
     let actual = imp(&mut cpu);
@@ -278,17 +211,9 @@ fn test_address_mode_izx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 1,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.x = 1;
+    cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -314,17 +239,9 @@ fn test_address_mode_izy() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 2,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.y = 2;
+    cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -350,17 +267,8 @@ fn test_address_mode_rel() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -386,17 +294,8 @@ fn test_address_mode_zp0() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -422,17 +321,9 @@ fn test_address_mode_zpx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 1,
-            y: 0,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
+    cpu.r.x = 1;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -458,17 +349,9 @@ fn test_address_mode_zpy() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 2,
-            pc: 1,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.pc = 1;
+    cpu.r.y = 2;
 
     let cpu_r_before = cpu.r.clone();
 
@@ -484,6 +367,8 @@ fn test_address_mode_zpy() {
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
+// ##### FLAGS ####
+
 #[test]
 fn test_set_flags() {
     // arrange
@@ -494,17 +379,7 @@ fn test_set_flags() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 0,
-            sp: 0,
-            status: 0,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
 
     // act
     cpu.set_flag(StatusFlag::D, true);
@@ -527,17 +402,8 @@ fn test_clear_flags() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu {
-        r: CpuRegisters {
-            a: 0,
-            x: 0,
-            y: 0,
-            pc: 0,
-            sp: 0,
-            status: 0xFF,
-        },
-        address_bus: address_bus,
-    };
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.r.status = 0xFF;
 
     // act
     cpu.set_flag(StatusFlag::D, false);
@@ -548,4 +414,48 @@ fn test_clear_flags() {
     assert_eq!(false, cpu.get_flag(StatusFlag::D));
     assert_eq!(false, cpu.get_flag(StatusFlag::C));
     assert_eq!(true, cpu.get_flag(StatusFlag::Z));
+}
+
+// ##### OPERATIONS ####
+
+#[test]
+fn test_lda_imp() {
+    // arrange
+    let expected: u8 = 0x55;
+    let mut mem = Memory::from_vec(0, vec![0xA9, 0x55]); // LDA #$55
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    cpu.cycle();
+
+    // assert
+    assert_eq!(expected, cpu.r.a);
+    assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
+}
+
+#[test]
+fn test_lda_zp0() {
+    // arrange
+    let expected: u8 = 0x55;
+    let mut mem = Memory::from_vec(0, vec![0xA5, 0x02, 0x55]); // LDA $02
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let cpu_r_before = cpu.r.clone();
+
+    // act
+    cpu.cycle();
+
+    // assert
+    assert_eq!(expected, cpu.r.a);
+    assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }

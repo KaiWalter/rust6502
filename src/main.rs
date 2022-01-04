@@ -1,12 +1,12 @@
 mod address_bus;
 mod memory;
 mod mos6502;
+
 use address_bus::*;
-use memory::Memory;
+use memory::*;
+use mos6502::*;
 
 fn main() {
-    mos6502::cycle();
-
     // Apple 1 configuration
     let mut mem = Memory::new(0, 0x1000); // 4kB memory
     let mut address_bus = AddressBus::new(0x1000); // potential separate component/ROM for each 4kB
@@ -26,4 +26,8 @@ fn main() {
         .write(0x110, 10)
         .expect("accessing wrong address");
     println!("{:x}", address_bus.read(0x110).unwrap());
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+
+    cpu.cycle();
 }

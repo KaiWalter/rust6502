@@ -35,7 +35,7 @@ pub struct AddressModeValues {
     add_cycles: u8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CpuRegisters {
     a: u8,
     x: u8,
@@ -47,6 +47,7 @@ pub struct CpuRegisters {
 
 pub struct Cpu<'a> {
     r: CpuRegisters,
+    remaining_cycles: u8,
     address_bus: AddressBus<'a>,
 }
 
@@ -65,7 +66,7 @@ impl CpuError {
     }
 }
 type AddressModeFunction = fn(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError>;
-type OpCodeFunction = fn(cpu: &mut Cpu, address_mode_values: AddressModeValues);
+type OpCodeFunction = fn(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8;
 
 struct OperationDefinition<'a> {
     name: &'a str,
@@ -333,8 +334,6 @@ static OPCODES: [OperationDefinition; 256] = [
     instr! {"???", xxx, imp, 7},
 ];
 
-// ##### FLAGS ####
-
 enum StatusFlag {
     C = (1 << 0), // Carry Bit
     Z = (1 << 1), // Zero
@@ -347,6 +346,22 @@ enum StatusFlag {
 }
 
 impl<'a> Cpu<'a> {
+    pub fn new(r: CpuRegisters, address_bus: AddressBus<'a>) -> Cpu<'a> {
+        Cpu {
+            r: CpuRegisters {
+                a: 0,
+                x: 0,
+                y: 0,
+                pc: 0,
+                sp: 0,
+                status: 0,
+            },
+            remaining_cycles: 0,
+            address_bus: address_bus,
+        }
+    }
+
+    // ##### FLAGS ####
     pub fn set_flag(&mut self, flag: StatusFlag, value: bool) {
         if value {
             self.r.status |= flag as u8
@@ -357,12 +372,34 @@ impl<'a> Cpu<'a> {
     pub fn get_flag(&mut self, flag: StatusFlag) -> bool {
         (self.r.status & flag as u8) != 0
     }
-}
 
-// ##### CYCLES ####
+    // ##### CYCLES ####
+    pub fn cycle(&mut self) {
+        if self.remaining_cycles == 0 {
+            match self.address_bus.read(self.r.pc) {
+                Ok(opcode) => {
+                    self.r.pc += 1;
+                    let operation = &OPCODES[opcode as usize];
 
-pub fn cycle() {
-    println!("6502 cycle");
-    let dummy = &OPCODES[0];
-    println!("{}", dummy.name);
+                    if operation.name == "???" {
+                        panic!("unknown opcode {:X}", opcode)
+                    }
+
+                    self.remaining_cycles = operation.cycles;
+
+                    match (operation.address_mode)(self) {
+                        Ok(address_mode_values) => {
+                            self.remaining_cycles += address_mode_values.add_cycles;
+                            self.remaining_cycles +=
+                                (operation.operation)(self, address_mode_values);
+                        }
+                        Err(e) => panic!("addressing error {:?}", e),
+                    }
+                }
+                Err(e) => panic!("addressing error with PC {:X} {:?}", self.r.pc, e),
+            }
+        }
+
+        self.remaining_cycles -= 1;
+    }
 }
