@@ -33,7 +33,9 @@ fn test_address_mode_abs() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }
 
@@ -67,7 +69,9 @@ fn test_address_mode_abx() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }
 
@@ -103,6 +107,7 @@ fn test_address_mode_abx_cross_page() {
     assert_eq!(actual.is_err(), false);
     let a = actual.unwrap();
     assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(1, a.add_cycles);
     assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }
@@ -137,7 +142,9 @@ fn test_address_mode_aby() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }
 
@@ -200,7 +207,9 @@ fn test_address_mode_ind() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 2, cpu.r.pc);
 }
 
@@ -226,7 +235,9 @@ fn test_address_mode_imm() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(expected + 1, cpu.r.pc);
 }
 
@@ -252,7 +263,9 @@ fn test_address_mode_imp() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().fetched_value);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.fetched_value);
+    assert_eq!(AddressModeResult::fetched, a.result);
 }
 
 #[test]
@@ -285,7 +298,9 @@ fn test_address_mode_izx() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
@@ -319,7 +334,9 @@ fn test_address_mode_izy() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
@@ -353,7 +370,9 @@ fn test_address_mode_rel() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().relative_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.relative_address);
+    assert_eq!(AddressModeResult::relative, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
@@ -387,7 +406,9 @@ fn test_address_mode_zp0() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
@@ -421,7 +442,9 @@ fn test_address_mode_zpx() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 
@@ -455,7 +478,9 @@ fn test_address_mode_zpy() {
     // assert
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap().absolute_address);
+    let a = actual.unwrap();
+    assert_eq!(expected, a.absolute_address);
+    assert_eq!(AddressModeResult::absolute, a.result);
     assert_eq!(cpu_r_before.pc + 1, cpu.r.pc);
 }
 

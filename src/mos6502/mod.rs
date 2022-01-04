@@ -3,6 +3,8 @@ mod operations;
 #[cfg(test)]
 mod tests;
 
+use std::str::ParseBoolError;
+
 use crate::address_bus::AddressBus;
 use addressmodes::*;
 use operations::*;
@@ -18,7 +20,15 @@ macro_rules! instr {
     }};
 }
 
+#[derive(Debug, PartialEq)]
+pub enum AddressModeResult {
+    absolute,
+    relative,
+    fetched,
+}
+
 pub struct AddressModeValues {
+    result: AddressModeResult,
     absolute_address: u16,
     relative_address: u16,
     fetched_value: u8,
