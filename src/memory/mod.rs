@@ -10,6 +10,7 @@ pub struct Memory {
     mem: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl Memory {
     pub fn new(offset: u16, size: usize) -> Memory {
         Memory {
@@ -32,6 +33,12 @@ impl Memory {
             mem: data,
         }
     }
+
+    pub fn fill(&mut self, size: usize, value: u8) {
+        while self.mem.len() < size {
+            self.mem.push(value);
+        }
+    }
 }
 
 impl Addressing for Memory {
@@ -43,7 +50,7 @@ impl Addressing for Memory {
         self.mem[(addr - self.offset) as usize] = data;
     }
 
-    fn len(&self) -> u16 {
-        self.mem.len() as u16
+    fn len(&self) -> usize {
+        self.mem.len() as usize
     }
 }

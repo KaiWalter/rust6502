@@ -3,6 +3,9 @@ mod operations;
 #[cfg(test)]
 mod tests;
 
+use std::fs::File;
+use std::io::Write;
+
 use crate::address_bus::AddressBus;
 use addressmodes::*;
 use operations::*;
@@ -47,10 +50,13 @@ pub struct CpuRegisters {
 pub struct Cpu<'a> {
     r: CpuRegisters,
     remaining_cycles: u8,
-    current_pc: u16,
     address_bus: AddressBus<'a>,
+    // DEBUG INFORMATION
+    current_pc: u16,
+    current_opcode: u8,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct CpuError {
     operation: String,
@@ -345,12 +351,14 @@ pub enum StatusFlag {
     N = (1 << 7), // Negative
 }
 
+#[allow(dead_code)]
 impl<'a> Cpu<'a> {
     pub fn new(r: CpuRegisters, address_bus: AddressBus<'a>) -> Cpu<'a> {
         Cpu {
             r: r,
             remaining_cycles: 0,
             current_pc: 0,
+            current_opcode: 0,
             address_bus: address_bus,
         }
     }
@@ -368,11 +376,35 @@ impl<'a> Cpu<'a> {
     }
 
     // ##### CYCLES ####
-    pub fn cycle(&mut self) {
+    pub fn reset(&mut self) {
+        self.r.status = 0 | StatusFlag::U as u8;
+        self.r.a = 0;
+        self.r.x = 0;
+        self.r.y = 0;
+        self.r.sp = 0xFD;
+
+        match self.address_bus.read(0xFFFC) {
+            Ok(lo) => {
+                self.r.pc = lo as u16;
+                match self.address_bus.read(0xFFFD) {
+                    Ok(hi) => {
+                        self.r.pc |= (hi as u16) << 8;
+                    }
+                    Err(e) => panic!("addressing error {}", e),
+                }
+            }
+            Err(e) => panic!("addressing error {}", e),
+        }
+
+        self.remaining_cycles = 7;
+    }
+
+    pub fn cycle(&mut self, _debug: bool) {
         if self.remaining_cycles == 0 {
             match self.address_bus.read(self.r.pc) {
                 Ok(opcode) => {
                     self.current_pc = self.r.pc;
+                    self.current_opcode = opcode;
                     self.r.pc += 1;
 
                     let operation = &OPCODES[opcode as usize];
@@ -388,6 +420,20 @@ impl<'a> Cpu<'a> {
                             self.remaining_cycles += address_mode_values.add_cycles;
                             self.remaining_cycles +=
                                 (operation.operation)(self, address_mode_values, opcode);
+
+                            // if debug {
+                            //     println!(
+                            //             "{:04x} {} - SP:{:02x} A:{:02x} X:{:02x} Y:{:02x} S:{:02x} {:08b}",
+                            //             self.current_pc,
+                            //             operation.name,
+                            //             self.r.sp,
+                            //             self.r.a,
+                            //             self.r.x,
+                            //             self.r.y,
+                            //             self.r.status,
+                            //             self.r.status
+                            //         );
+                            // }
                         }
                         Err(e) => panic!("addressing error {:?}", e),
                     }
@@ -397,5 +443,74 @@ impl<'a> Cpu<'a> {
         }
 
         self.remaining_cycles -= 1;
+    }
+
+    pub fn cycle_file(&mut self, w: &mut File) {
+        if self.remaining_cycles == 0 {
+            match self.address_bus.read(self.r.pc) {
+                Ok(opcode) => {
+                    self.current_pc = self.r.pc;
+                    self.current_opcode = opcode;
+                    self.r.pc += 1;
+
+                    let operation = &OPCODES[opcode as usize];
+
+                    if operation.name == "???" {
+                        panic!("unknown opcode {:X}", opcode)
+                    }
+
+                    self.remaining_cycles = operation.cycles;
+
+                    match (operation.address_mode)(self) {
+                        Ok(address_mode_values) => {
+                            self.remaining_cycles += address_mode_values.add_cycles;
+                            self.remaining_cycles +=
+                                (operation.operation)(self, address_mode_values, opcode);
+
+                            writeln!(
+                                w,
+                                "{:04x} {} - SP:{:02x} A:{:02x} X:{:02x} Y:{:02x} S:{:02x} {:08b}",
+                                self.current_pc,
+                                operation.name,
+                                self.r.sp,
+                                self.r.a,
+                                self.r.x,
+                                self.r.y,
+                                self.r.status,
+                                self.r.status
+                            )
+                            .unwrap();
+                        }
+                        Err(e) => panic!("addressing error {:?}", e),
+                    }
+                }
+                Err(e) => panic!("addressing error with PC {:X} {:?}", self.r.pc, e),
+            }
+        }
+
+        self.remaining_cycles = 0; // skip cycles
+    }
+
+    pub fn wait_for_system_reset_cycles(&mut self) {
+        while self.remaining_cycles > 0 {
+            self.cycle(false);
+        }
+    }
+
+    pub fn run(&mut self, from_addr: u16, to_addr: u16) {
+        self.reset();
+        self.r.pc = from_addr;
+        self.wait_for_system_reset_cycles();
+        let mut prev_pc = self.r.pc;
+
+        while self.current_pc != to_addr {
+            if self.remaining_cycles == 0 {
+                if prev_pc == self.current_pc {
+                    panic!("infinite loop at {:X}", self.current_pc);
+                }
+                prev_pc = self.current_pc;
+            }
+            self.cycle(true);
+        }
     }
 }

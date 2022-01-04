@@ -1,19 +1,40 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceRoot}/target/debug/rust6502",
+            "name": "Debug executable 'rust6502'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=rust6502",
+                    "--package=rust6502"
+                ],
+                "filter": {
+                    "kind": "bin"
+                }
+            },
             "args": [],
-            "cwd": "${workspaceFolder}/target/debug/",
-            "sourceLanguages": [
-                "rust"
-            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'rust6502'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=rust6502",
+                    "--package=rust6502"
+                ],
+                "filter": {
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

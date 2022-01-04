@@ -1,3 +1,5 @@
+use std::fs::File;
+
 #[cfg(test)]
 use super::*;
 use crate::address_bus::*;
@@ -432,7 +434,7 @@ fn test_lda_imp() {
     let cpu_r_before = cpu.r.clone();
 
     // act
-    cpu.cycle();
+    cpu.cycle(false);
 
     // assert
     assert_eq!(expected, cpu.r.a);
@@ -453,7 +455,7 @@ fn test_lda_zp0() {
     let cpu_r_before = cpu.r.clone();
 
     // act
-    cpu.cycle();
+    cpu.cycle(false);
 
     // assert
     assert_eq!(expected, cpu.r.a);
@@ -492,7 +494,7 @@ fn test_ld_axy_st_axy() {
 
     // act
     while cpu.r.pc < 0x0E {
-        cpu.cycle();
+        cpu.cycle(false);
     }
 
     // assert
@@ -502,4 +504,44 @@ fn test_ld_axy_st_axy() {
     assert_eq!(expected, cpu.address_bus.read(0x10).unwrap());
     assert_eq!(expected + 1, cpu.address_bus.read(0x11).unwrap());
     assert_eq!(expected + 2, cpu.address_bus.read(0x12).unwrap());
+}
+
+// ##### TEST ROMS ####
+
+#[test]
+fn functional_test() {
+    // arrange
+    // let mut w = File::create("func-rust.txt").unwrap();
+
+    const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;
+    let mut mem = Memory::load_rom(0, "./roms/6502_functional_test.bin".to_string());
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.reset();
+    cpu.r.pc = 0x0400;
+    cpu.wait_for_system_reset_cycles();
+    let mut prev_pc = cpu.r.pc;
+
+    // act
+    while cpu.current_pc != END_OF_FUNCTIONAL_TEST {
+        // last error : 'infinite loop at 3489', src/mos6502/tests.rs:540:17
+        if cpu.remaining_cycles == 0 {
+            if prev_pc == cpu.current_pc {
+                // w.sync_all()?;
+                panic!("infinite loop at {:X}", cpu.current_pc);
+            }
+            prev_pc = cpu.current_pc;
+        }
+        // cpu.cycle_file(&mut w);
+        cpu.cycle(false);
+    }
+
+    // w.flush().unwrap();
+
+    // assert
+    assert_eq!(END_OF_FUNCTIONAL_TEST, cpu.current_pc);
 }

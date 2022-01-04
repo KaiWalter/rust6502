@@ -49,15 +49,15 @@ fn from_pc_byte(cpu: &mut Cpu, operation: &str) -> Result<AddressModeValues, Cpu
 }
 
 pub fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABS", 0);
+    from_pc_word(cpu, "ABS", 0)
 }
 
 pub fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABX", cpu.r.x);
+    from_pc_word(cpu, "ABX", cpu.r.x)
 }
 
 pub fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABY", cpu.r.y);
+    from_pc_word(cpu, "ABY", cpu.r.y)
 }
 
 pub fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
@@ -208,7 +208,7 @@ pub fn zpx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     match from_pc_byte(cpu, "ZPX") {
         Ok(result) => Ok(AddressModeValues {
             result: AddressModeResult::Absolute,
-            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.x as u16,
+            absolute_address: (result.absolute_address as u16 + cpu.r.x as u16) & 0x00FF,
             relative_address: 0,
             fetched_value: 0,
             add_cycles: 0,
@@ -222,7 +222,7 @@ pub fn zpy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
     match from_pc_byte(cpu, "ZPY") {
         Ok(result) => Ok(AddressModeValues {
             result: AddressModeResult::Absolute,
-            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.y as u16,
+            absolute_address: (result.absolute_address as u16 + cpu.r.y as u16) & 0x00FF,
             relative_address: 0,
             fetched_value: 0,
             add_cycles: 0,

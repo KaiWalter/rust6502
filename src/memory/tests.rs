@@ -32,7 +32,7 @@ fn read_vec_memory() {
 #[test]
 fn load_rom() {
     // arrange
-    let rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.rom".to_string());
+    let rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.bin".to_string());
     let expected = 216u8;
 
     let addr = 0xFF00;

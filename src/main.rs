@@ -7,27 +7,13 @@ use memory::*;
 use mos6502::*;
 
 fn main() {
-    // Apple 1 configuration
-    let mut mem = Memory::new(0, 0x1000); // 4kB memory
-    let mut address_bus = AddressBus::new(0x1000); // potential separate component/ROM for each 4kB
+    const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;
+    let mut mem = Memory::load_rom(0, "./roms/6502_functional_test.bin".to_string());
+    let mut address_bus = AddressBus::new(0x4000);
     if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
         panic!("add_component failed");
     }
 
-    let mut rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.rom".to_string());
-    if address_bus
-        .add_component(0xFF00, rom_monitor.len(), &mut (rom_monitor))
-        .is_err()
-    {
-        panic!("add_component failed");
-    }
-
-    address_bus
-        .write(0x110, 10)
-        .expect("accessing wrong address");
-    println!("{:x}", address_bus.read(0x110).unwrap());
-
     let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
-
-    cpu.cycle();
+    cpu.run(0x0400, END_OF_FUNCTIONAL_TEST);
 }
