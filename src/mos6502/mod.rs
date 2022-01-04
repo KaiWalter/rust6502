@@ -1,7 +1,11 @@
+mod addressmodes;
+mod operations;
 #[cfg(test)]
 mod tests;
 
 use crate::address_bus::AddressBus;
+use addressmodes::*;
+use operations::*;
 
 macro_rules! instr {
     ($name:expr,$operation:expr,$address_mode:expr,$cycles:expr) => {{
@@ -14,7 +18,7 @@ macro_rules! instr {
     }};
 }
 
-struct AddressModeValues {
+pub struct AddressModeValues {
     absolute_address: u16,
     relative_address: u16,
     fetched_value: u8,
@@ -22,7 +26,7 @@ struct AddressModeValues {
 }
 
 #[derive(Debug, Clone)]
-struct CpuRegisters {
+pub struct CpuRegisters {
     a: u8,
     x: u8,
     y: u8,
@@ -31,7 +35,7 @@ struct CpuRegisters {
     status: u8,
 }
 
-struct Cpu<'a> {
+pub struct Cpu<'a> {
     r: CpuRegisters,
     address_bus: AddressBus<'a>,
 }
@@ -318,287 +322,6 @@ static OPCODES: [OperationDefinition; 256] = [
     instr! {"inc", inc, abx, 7},
     instr! {"???", xxx, imp, 7},
 ];
-
-// ##### ADDRESS MODES ####
-
-fn from_pc_word(cpu: &mut Cpu, operation: &str, index: u8) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new(operation, cpu.r.pc);
-
-    match cpu.address_bus.read(cpu.r.pc) {
-        Ok(lo) => {
-            cpu.r.pc += 1;
-            match cpu.address_bus.read(cpu.r.pc) {
-                Ok(hi) => {
-                    cpu.r.pc += 1;
-                    let abs_addr = ((hi as u16) << 8 | lo as u16) + index as u16;
-                    let add_cycles = if index > 0 && ((abs_addr & 0xFF00) != ((hi as u16) << 8)) {
-                        1 // additional cycle when cross-page boundary
-                    } else {
-                        0
-                    };
-                    Ok(AddressModeValues {
-                        absolute_address: abs_addr,
-                        relative_address: 0,
-                        fetched_value: 0,
-                        add_cycles: add_cycles,
-                    })
-                }
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn from_pc_byte(cpu: &mut Cpu, operation: &str) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new(operation, cpu.r.pc);
-    match cpu.address_bus.read(cpu.r.pc) {
-        Ok(abs_addr) => {
-            cpu.r.pc += 1;
-            Ok(AddressModeValues {
-                absolute_address: abs_addr as u16,
-                relative_address: 0,
-                fetched_value: 0,
-                add_cycles: 0,
-            })
-        }
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn abs(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABS", 0);
-}
-
-fn abx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABX", cpu.r.x);
-}
-
-fn aby(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    return from_pc_word(cpu, "ABY", cpu.r.y);
-}
-
-fn ind(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IND", cpu.r.pc);
-
-    match from_pc_word(cpu, "IND", 0) {
-        Ok(pointer) => {
-            let mut abs_addr = pointer.absolute_address;
-            match cpu.address_bus.read(abs_addr) {
-                Ok(lo) => {
-                    if abs_addr & 0x00FF == 0x00FF {
-                        abs_addr = abs_addr & 0xFF00
-                    } else {
-                        abs_addr += 1
-                    }
-                    match cpu.address_bus.read(abs_addr) {
-                        Ok(hi) => Ok(AddressModeValues {
-                            absolute_address: (hi as u16) << 8 | lo as u16,
-                            relative_address: 0,
-                            fetched_value: 0,
-                            add_cycles: 0,
-                        }),
-                        Err(_e) => Err(cpu_error),
-                    }
-                }
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(cpu_error) => Err(cpu_error),
-    }
-}
-
-fn imm(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let addr = cpu.r.pc;
-    cpu.r.pc += 1;
-    Ok(AddressModeValues {
-        absolute_address: addr,
-        relative_address: 0,
-        fetched_value: 0,
-        add_cycles: 0,
-    })
-}
-
-fn imp(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    Ok(AddressModeValues {
-        absolute_address: 0,
-        relative_address: 0,
-        fetched_value: cpu.r.a,
-        add_cycles: 0,
-    })
-}
-
-fn izx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IZX", cpu.r.pc);
-
-    match from_pc_byte(cpu, "IZX") {
-        Ok(result) => {
-            let indexed_address = result.absolute_address as u16 + cpu.r.x as u16;
-            match cpu.address_bus.read(indexed_address & 0x00FF) {
-                Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
-                    Ok(hi) => Ok(AddressModeValues {
-                        absolute_address: (hi as u16) << 8 | lo as u16,
-                        relative_address: 0,
-                        fetched_value: 0,
-                        add_cycles: 0,
-                    }),
-                    Err(_e) => Err(cpu_error),
-                },
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn izy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("IZY", cpu.r.pc);
-
-    match from_pc_byte(cpu, "IZY") {
-        Ok(result) => {
-            let indexed_address = result.absolute_address as u16;
-            match cpu.address_bus.read(indexed_address & 0x00FF) {
-                Ok(lo) => match cpu.address_bus.read((indexed_address + 1) & 0x00FF) {
-                    Ok(hi) => {
-                        let abs_addr = ((hi as u16) << 8 | lo as u16) + cpu.r.y as u16;
-                        let add_cycles = if (abs_addr & 0xFF00) != ((hi as u16) << 8) {
-                            1 // additional cycle when cross-page boundary
-                        } else {
-                            0
-                        };
-                        Ok(AddressModeValues {
-                            absolute_address: abs_addr,
-                            relative_address: 0,
-                            fetched_value: 0,
-                            add_cycles: add_cycles,
-                        })
-                    }
-                    Err(_e) => Err(cpu_error),
-                },
-                Err(_e) => Err(cpu_error),
-            }
-        }
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn rel(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("REL", cpu.r.pc);
-    match from_pc_byte(cpu, "REL") {
-        Ok(result) => {
-            let mut rel_address = result.absolute_address as u16;
-            if rel_address & 0x80 != 0 {
-                rel_address |= 0xFF00
-            }
-            Ok(AddressModeValues {
-                absolute_address: 0,
-                relative_address: rel_address,
-                fetched_value: 0,
-                add_cycles: 0,
-            })
-        }
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn zp0(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZP0", cpu.r.pc);
-    match from_pc_byte(cpu, "ZP0") {
-        Ok(result) => Ok(AddressModeValues {
-            absolute_address: result.absolute_address as u16 & 0x00FF,
-            relative_address: 0,
-            fetched_value: 0,
-            add_cycles: 0,
-        }),
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn zpx(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZPX", cpu.r.pc);
-    match from_pc_byte(cpu, "ZPX") {
-        Ok(result) => Ok(AddressModeValues {
-            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.x as u16,
-            relative_address: 0,
-            fetched_value: 0,
-            add_cycles: 0,
-        }),
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-fn zpy(cpu: &mut Cpu) -> Result<AddressModeValues, CpuError> {
-    let cpu_error = CpuError::new("ZPY", cpu.r.pc);
-    match from_pc_byte(cpu, "ZPY") {
-        Ok(result) => Ok(AddressModeValues {
-            absolute_address: (result.absolute_address as u16 & 0x00FF) + cpu.r.y as u16,
-            relative_address: 0,
-            fetched_value: 0,
-            add_cycles: 0,
-        }),
-        Err(_e) => Err(cpu_error),
-    }
-}
-
-// ##### OP CODES ####
-
-fn adc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn and(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn asl(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bcc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bcs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn beq(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bit(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bmi(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bne(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bpl(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn brk(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bvc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn bvs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn clc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn cld(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn cli(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn clv(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn cmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn cpx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn cpy(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn dec(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn dex(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn dey(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn eor(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn inc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn inx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn iny(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn jmp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn jsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn lda(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn ldx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn ldy(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn lsr(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn nop(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn ora(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn pha(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn php(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn pla(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn plp(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn rol(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn ror(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn rti(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn rts(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sbc(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sec(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sed(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sei(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sta(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn stx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn sty(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn tax(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn tay(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn tsx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn txa(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn txs(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn tya(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
-fn xxx(cpu: &mut Cpu, address_mode_values: AddressModeValues) {}
 
 // ##### CYCLES ####
 
