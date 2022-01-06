@@ -53,7 +53,6 @@ pub struct Cpu<'a> {
     address_bus: AddressBus<'a>,
     // DEBUG INFORMATION
     current_pc: u16,
-    current_opcode: u8,
 }
 
 #[allow(dead_code)]
@@ -358,7 +357,6 @@ impl<'a> Cpu<'a> {
             r: r,
             remaining_cycles: 0,
             current_pc: 0,
-            current_opcode: 0,
             address_bus: address_bus,
         }
     }
@@ -399,12 +397,11 @@ impl<'a> Cpu<'a> {
         self.remaining_cycles = 7;
     }
 
-    pub fn cycle(&mut self, _debug: bool) {
+    pub fn cycle(&mut self, debug: bool) {
         if self.remaining_cycles == 0 {
             match self.address_bus.read(self.r.pc) {
                 Ok(opcode) => {
                     self.current_pc = self.r.pc;
-                    self.current_opcode = opcode;
                     self.r.pc += 1;
 
                     let operation = &OPCODES[opcode as usize];
@@ -421,19 +418,19 @@ impl<'a> Cpu<'a> {
                             self.remaining_cycles +=
                                 (operation.operation)(self, address_mode_values, opcode);
 
-                            // if debug {
-                            //     println!(
-                            //             "{:04x} {} - SP:{:02x} A:{:02x} X:{:02x} Y:{:02x} S:{:02x} {:08b}",
-                            //             self.current_pc,
-                            //             operation.name,
-                            //             self.r.sp,
-                            //             self.r.a,
-                            //             self.r.x,
-                            //             self.r.y,
-                            //             self.r.status,
-                            //             self.r.status
-                            //         );
-                            // }
+                            if debug {
+                                println!(
+                                        "{:04x} {} - SP:{:02x} A:{:02x} X:{:02x} Y:{:02x} S:{:02x} {:08b}",
+                                        self.current_pc,
+                                        operation.name,
+                                        self.r.sp,
+                                        self.r.a,
+                                        self.r.x,
+                                        self.r.y,
+                                        self.r.status,
+                                        self.r.status
+                                    );
+                            }
                         }
                         Err(e) => panic!("addressing error {:?}", e),
                     }
@@ -450,7 +447,6 @@ impl<'a> Cpu<'a> {
             match self.address_bus.read(self.r.pc) {
                 Ok(opcode) => {
                     self.current_pc = self.r.pc;
-                    self.current_opcode = opcode;
                     self.r.pc += 1;
 
                     let operation = &OPCODES[opcode as usize];
@@ -510,7 +506,7 @@ impl<'a> Cpu<'a> {
                 }
                 prev_pc = self.current_pc;
             }
-            self.cycle(true);
+            self.cycle(false);
         }
     }
 }

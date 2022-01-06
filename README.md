@@ -114,6 +114,7 @@ Hence expressions with mixed `&` and `+` need to be put in parenthesis explicitl
 - [1st other 6502 implementation to peek](https://github.com/alexander-akhmetov/mos6502) -> [applied for Apple 1](https://github.com/alexander-akhmetov/apple1)
 - [2nd other 6502 implementation to peek](https://github.com/GarettCooper/emulator_6502) -> [applied for NES](https://github.com/GarettCooper/gc_nes_emulator)
 - [other sample ROMs](https://github.com/alexander-akhmetov/apple1/tree/master/roms)
+- [Disassembler](https://masswerk.at/6502/disassembler.html)
 
 ### helpers
 

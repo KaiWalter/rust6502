@@ -1,4 +1,4 @@
-use std::fs::File;
+// use std::fs::File;
 
 #[cfg(test)]
 use super::*;
@@ -544,4 +544,63 @@ fn functional_test() {
 
     // assert
     assert_eq!(END_OF_FUNCTIONAL_TEST, cpu.current_pc);
+}
+
+#[test]
+fn decimal_test() {
+    // arrange
+    // let mut w = File::create("dec-rust.txt").unwrap();
+
+    const END_OF_DECIMAL_TEST: u16 = 0x024B;
+    const RESULT_ADDR_DECIMAL_TEST: u16 = 0x0B;
+    const RESULT_DECIMAL_TEST: u8 = 0;
+
+    let mut address_bus = AddressBus::new(0x100);
+
+    let mut mem = Memory::from_vec(0, vec![0; 0x200]);
+    if address_bus
+        .add_component(0x0000, mem.len(), &mut (mem))
+        .is_err()
+    {
+        panic!("add_component failed");
+    }
+
+    let mut mem_high = Memory::from_vec(0xFF00, vec![0; 256]);
+    if address_bus
+        .add_component(0xFF00, mem_high.len(), &mut (mem_high))
+        .is_err()
+    {
+        panic!("add_component failed");
+    }
+
+    let mut rom = Memory::load_rom(0x200, "./roms/6502_decimal_test.bin".to_string());
+    rom.fill(0x200, 0);
+    if address_bus
+        .add_component(0x0200, rom.len(), &mut (rom))
+        .is_err()
+    {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    cpu.reset();
+    cpu.r.pc = 0x200;
+    cpu.wait_for_system_reset_cycles();
+
+    // act
+    while cpu.r.pc != END_OF_DECIMAL_TEST {
+        // cpu.cycle_file(&mut w);
+        cpu.cycle(false);
+    }
+
+    // w.sync_all().unwrap();
+
+    let actual = cpu.address_bus.read(RESULT_ADDR_DECIMAL_TEST).unwrap();
+
+    // assert
+    assert_eq!(
+        RESULT_DECIMAL_TEST, actual,
+        "expected at {:04x}: {:02x} actual: {:02x}",
+        RESULT_ADDR_DECIMAL_TEST, RESULT_DECIMAL_TEST, actual
+    );
 }
