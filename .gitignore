@@ -16,3 +16,7 @@ Cargo.lock
 # dumps
 *.txt
 *.zip
+
+# perf
+perf.data*
+flamegraph*

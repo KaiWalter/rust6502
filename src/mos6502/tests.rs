@@ -170,7 +170,7 @@ fn test_address_mode_ind() {
 fn test_address_mode_imm() {
     // arrange
     let expected: u16 = 0x1234;
-    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x0));
+    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x1000));
     cpu.r.pc = expected;
 
     // act
@@ -189,7 +189,7 @@ fn test_address_mode_imm() {
 fn test_address_mode_imp() {
     // arrange
     let expected: u8 = 0x12;
-    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x0));
+    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x1000));
     cpu.r.a = expected;
 
     // act
