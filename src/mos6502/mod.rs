@@ -6,7 +6,7 @@ mod tests;
 use std::fs::File;
 use std::io::Write;
 
-use crate::address_bus::AddressBus;
+use crate::address_bus::ExternalAddressing;
 use addressmodes::*;
 use operations::*;
 
@@ -50,7 +50,7 @@ pub struct CpuRegisters {
 pub struct Cpu<'a> {
     r: CpuRegisters,
     remaining_cycles: u8,
-    address_bus: AddressBus<'a>,
+    address_bus: &'a mut dyn ExternalAddressing,
     // DEBUG INFORMATION
     current_pc: u16,
 }
@@ -352,7 +352,7 @@ pub enum StatusFlag {
 
 #[allow(dead_code)]
 impl<'a> Cpu<'a> {
-    pub fn new(r: CpuRegisters, address_bus: AddressBus<'a>) -> Cpu<'a> {
+    pub fn new(r: CpuRegisters, address_bus: &'a mut dyn ExternalAddressing) -> Cpu<'a> {
         Cpu {
             r: r,
             remaining_cycles: 0,

@@ -3,7 +3,7 @@ mod tests;
 
 use std::fs;
 
-use crate::address_bus::Addressing;
+use crate::address_bus::InternalAddressing;
 
 pub struct Memory {
     offset: u16,
@@ -41,7 +41,7 @@ impl Memory {
     }
 }
 
-impl Addressing for Memory {
+impl InternalAddressing for Memory {
     fn read(&self, addr: u16) -> u8 {
         self.mem[(addr - self.offset) as usize]
     }

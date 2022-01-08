@@ -17,7 +17,7 @@ fn test_address_mode_abs() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
@@ -44,7 +44,7 @@ fn test_address_mode_abx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
     cpu.r.x = 2;
 
@@ -72,7 +72,7 @@ fn test_address_mode_abx_cross_page() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
     cpu.r.x = 3;
 
@@ -101,7 +101,7 @@ fn test_address_mode_aby() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
     cpu.r.y = 3;
 
@@ -128,7 +128,7 @@ fn test_address_mode_abs_addr_error() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 0x100;
 
     // act
@@ -149,7 +149,7 @@ fn test_address_mode_ind() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 3;
 
     let cpu_r_before = cpu.r.clone();
@@ -170,7 +170,8 @@ fn test_address_mode_ind() {
 fn test_address_mode_imm() {
     // arrange
     let expected: u16 = 0x1234;
-    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x1000));
+    let mut address_bus = AddressBus::new(0x1000);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = expected;
 
     // act
@@ -189,7 +190,8 @@ fn test_address_mode_imm() {
 fn test_address_mode_imp() {
     // arrange
     let expected: u8 = 0x12;
-    let mut cpu = Cpu::new(CpuRegisters::default(), AddressBus::new(0x1000));
+    let mut address_bus = AddressBus::new(0x1000);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.a = expected;
 
     // act
@@ -213,7 +215,7 @@ fn test_address_mode_izx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.x = 1;
     cpu.r.pc = 1;
 
@@ -241,7 +243,7 @@ fn test_address_mode_izy() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.y = 2;
     cpu.r.pc = 1;
 
@@ -269,7 +271,7 @@ fn test_address_mode_rel() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
@@ -296,7 +298,7 @@ fn test_address_mode_zp0() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
 
     let cpu_r_before = cpu.r.clone();
@@ -323,7 +325,7 @@ fn test_address_mode_zpx() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
     cpu.r.x = 1;
 
@@ -351,7 +353,7 @@ fn test_address_mode_zpy() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.pc = 1;
     cpu.r.y = 2;
 
@@ -381,7 +383,7 @@ fn test_set_flags() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
 
     // act
     cpu.set_flag(StatusFlag::D, true);
@@ -404,7 +406,7 @@ fn test_clear_flags() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.r.status = 0xFF;
 
     // act
@@ -430,7 +432,7 @@ fn test_lda_imp() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     let cpu_r_before = cpu.r.clone();
 
     // act
@@ -451,7 +453,7 @@ fn test_lda_zp0() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     let cpu_r_before = cpu.r.clone();
 
     // act
@@ -490,7 +492,7 @@ fn test_ld_axy_st_axy() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
 
     // act
     while cpu.r.pc < 0x0E {
@@ -515,12 +517,9 @@ fn functional_test() {
 
     const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;
     let mut mem = Memory::load_rom(0, "./roms/6502_functional_test.bin".to_string());
-    let mut address_bus = AddressBus::new(mem.len());
-    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
-        panic!("add_component failed");
-    }
+    let mut address_bus = SimpleAddressBus::new(&mut (mem));
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.reset();
     cpu.r.pc = 0x0400;
     cpu.wait_for_system_reset_cycles();
@@ -582,7 +581,7 @@ fn decimal_test() {
         panic!("add_component failed");
     }
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
     cpu.reset();
     cpu.r.pc = 0x200;
     cpu.wait_for_system_reset_cycles();

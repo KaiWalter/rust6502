@@ -24,16 +24,21 @@ impl fmt::Display for AddressingError {
     }
 }
 
-pub trait Addressing {
+pub trait InternalAddressing {
     fn read(&self, addr: u16) -> u8;
     fn write(&mut self, addr: u16, data: u8);
     fn len(&self) -> usize;
 }
 
+pub trait ExternalAddressing {
+    fn read(&self, addr: u16) -> Result<u8, AddressingError>;
+    fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError>;
+}
+
 pub struct AddressBus<'a> {
     block_size: usize,
     block_component_map: Vec<usize>, // map a 1..n blocks to 1 components
-    component_addr: Vec<&'a mut dyn Addressing>, // 1:1 map component to its addressing
+    component_addr: Vec<&'a mut dyn InternalAddressing>, // 1:1 map component to its addressing
 }
 
 impl<'a> AddressBus<'a> {
@@ -49,7 +54,7 @@ impl<'a> AddressBus<'a> {
         &mut self,
         from_addr: u16,
         size: usize,
-        component: &'a mut (dyn Addressing),
+        component: &'a mut (dyn InternalAddressing),
     ) -> Result<(), AddressingError> {
         let size_outside_blocks = size % self.block_size as usize;
         let mem_outside_block = component.len() % self.block_size as usize;
@@ -69,8 +74,10 @@ impl<'a> AddressBus<'a> {
             Err(AddressingError::new("add_compontent", 0))
         }
     }
+}
 
-    pub fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+impl ExternalAddressing for AddressBus<'_> {
+    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
         let block = addr as usize / self.block_size;
         if self.block_component_map[block] == usize::MAX {
             Err(AddressingError::new("read", addr))
@@ -83,7 +90,7 @@ impl<'a> AddressBus<'a> {
         }
     }
 
-    pub fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError> {
+    fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError> {
         let block = addr as usize / self.block_size;
         if self.block_component_map[block] == usize::MAX {
             Err(AddressingError::new("write", addr))
@@ -97,5 +104,28 @@ impl<'a> AddressBus<'a> {
                 None => Err(AddressingError::new("write", addr)),
             }
         }
+    }
+}
+
+pub struct SimpleAddressBus<'a> {
+    component: &'a mut dyn InternalAddressing,
+}
+
+impl<'a> SimpleAddressBus<'a> {
+    pub fn new(component: &'a mut (dyn InternalAddressing)) -> SimpleAddressBus {
+        SimpleAddressBus {
+            component: component,
+        }
+    }
+}
+
+impl ExternalAddressing for SimpleAddressBus<'_> {
+    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+        Ok(self.component.read(addr))
+    }
+
+    fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError> {
+        self.component.write(addr, data);
+        Ok(())
     }
 }
