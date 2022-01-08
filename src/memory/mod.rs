@@ -3,7 +3,7 @@ mod tests;
 
 use std::fs;
 
-use crate::address_bus::InternalAddressing;
+use crate::address_bus::{AddressingError, ExternalAddressing, InternalAddressing};
 
 pub struct Memory {
     offset: u16,
@@ -42,15 +42,34 @@ impl Memory {
 }
 
 impl InternalAddressing for Memory {
-    fn read(&self, addr: u16) -> u8 {
+    fn int_read(&self, addr: u16) -> u8 {
         self.mem[(addr - self.offset) as usize]
     }
 
-    fn write(&mut self, addr: u16, data: u8) {
+    fn int_write(&mut self, addr: u16, data: u8) {
         self.mem[(addr - self.offset) as usize] = data;
     }
 
     fn len(&self) -> usize {
         self.mem.len() as usize
+    }
+}
+
+impl ExternalAddressing for Memory {
+    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+        if addr < self.offset || (addr - self.offset) as usize >= self.mem.len() {
+            Err(AddressingError::new("read", addr))
+        } else {
+            Ok(self.mem[(addr - self.offset) as usize])
+        }
+    }
+
+    fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError> {
+        if addr < self.offset || (addr - self.offset) as usize >= self.mem.len() {
+            Err(AddressingError::new("write", addr))
+        } else {
+            self.mem[(addr - self.offset) as usize] = data;
+            Ok(())
+        }
     }
 }

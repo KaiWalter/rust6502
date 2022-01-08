@@ -145,22 +145,3 @@ fn load_rom() {
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
 }
-
-#[test]
-fn writes_and_reads_simple() {
-    // arrange
-    let mut mem = Memory::new(0, 0x200);
-    let mut address_bus = SimpleAddressBus::new(&mut (mem));
-
-    let addr = 10;
-    let expected = 42u8;
-
-    // act
-    address_bus.write(addr, 42).expect("wrong address");
-    let actual = address_bus.read(addr);
-
-    // assert
-    assert_eq!(actual.is_ok(), true);
-    assert_eq!(actual.is_err(), false);
-    assert_eq!(expected, actual.unwrap());
-}

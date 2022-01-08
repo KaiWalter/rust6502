@@ -3,6 +3,8 @@ mod tests;
 
 use std::fmt;
 
+use crate::memory::Memory;
+
 #[derive(Debug)]
 pub struct AddressingError {
     operation: String,
@@ -10,7 +12,7 @@ pub struct AddressingError {
 }
 
 impl AddressingError {
-    fn new(operation: &str, addr: u16) -> AddressingError {
+    pub fn new(operation: &str, addr: u16) -> AddressingError {
         AddressingError {
             operation: operation.to_string(),
             addr: addr,
@@ -25,8 +27,8 @@ impl fmt::Display for AddressingError {
 }
 
 pub trait InternalAddressing {
-    fn read(&self, addr: u16) -> u8;
-    fn write(&mut self, addr: u16, data: u8);
+    fn int_read(&self, addr: u16) -> u8;
+    fn int_write(&mut self, addr: u16, data: u8);
     fn len(&self) -> usize;
 }
 
@@ -84,7 +86,7 @@ impl ExternalAddressing for AddressBus<'_> {
         } else {
             let component_key = self.block_component_map[block];
             match self.component_addr.get(component_key) {
-                Some(component) => Ok(component.read(addr)),
+                Some(component) => Ok(component.int_read(addr)),
                 None => Err(AddressingError::new("read", addr)),
             }
         }
@@ -98,34 +100,11 @@ impl ExternalAddressing for AddressBus<'_> {
             let component_key = self.block_component_map[block];
             match self.component_addr.get_mut(component_key) {
                 Some(component) => {
-                    component.write(addr, data);
+                    component.int_write(addr, data);
                     Ok(())
                 }
                 None => Err(AddressingError::new("write", addr)),
             }
         }
-    }
-}
-
-pub struct SimpleAddressBus<'a> {
-    component: &'a mut dyn InternalAddressing,
-}
-
-impl<'a> SimpleAddressBus<'a> {
-    pub fn new(component: &'a mut (dyn InternalAddressing)) -> SimpleAddressBus {
-        SimpleAddressBus {
-            component: component,
-        }
-    }
-}
-
-impl ExternalAddressing for SimpleAddressBus<'_> {
-    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
-        Ok(self.component.read(addr))
-    }
-
-    fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError> {
-        self.component.write(addr, data);
-        Ok(())
     }
 }

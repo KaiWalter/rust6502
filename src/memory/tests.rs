@@ -8,8 +8,8 @@ fn writes_and_reads_memory() {
     let expected = 42u8;
 
     // act
-    mem.write(10, expected);
-    let actual = mem.read(10);
+    mem.int_write(10, expected);
+    let actual = mem.int_read(10);
 
     // assert
     assert_eq!(expected, actual);
@@ -22,8 +22,8 @@ fn read_vec_memory() {
     let expected = 42u8;
 
     // act
-    mem.write(3, expected);
-    let actual = mem.read(3);
+    mem.int_write(3, expected);
+    let actual = mem.int_read(3);
 
     // assert
     assert_eq!(expected, actual);
@@ -38,8 +38,82 @@ fn load_rom() {
     let addr = 0xFF00;
 
     // act
-    let actual = rom_monitor.read(addr);
+    let actual = rom_monitor.int_read(addr);
 
     // assert
     assert_eq!(expected, actual);
+}
+
+#[test]
+fn writes_and_reads_external() {
+    // arrange
+    let mut mem = Memory::new(0, 0x200);
+
+    let addr = 10;
+    let expected = 42u8;
+
+    // act
+    mem.write(addr, 42).expect("wrong address");
+    let actual = mem.read(addr);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap());
+}
+
+#[test]
+fn writes_and_reads_external_with_offset() {
+    // arrange
+    let mut mem = Memory::new(0x100, 0x200);
+
+    let addr = 0x211;
+    let expected = 42u8;
+
+    // act
+    mem.write(addr, 42).expect("wrong address");
+    let actual = mem.read(addr);
+
+    // assert
+    assert_eq!(actual.is_ok(), true);
+    assert_eq!(actual.is_err(), false);
+    assert_eq!(expected, actual.unwrap());
+}
+
+#[test]
+fn writes_and_reads_external_wrong_lower_addr() {
+    // arrange
+    let mut mem = Memory::new(0x100, 0x200);
+
+    let addr = 0x050;
+    let expected = 42u8;
+
+    // act
+    let actual_write = mem.write(addr, 42);
+    let actual_read = mem.read(addr);
+
+    // assert
+    assert_eq!(actual_write.is_ok(), false);
+    assert_eq!(actual_write.is_err(), true);
+    assert_eq!(actual_read.is_ok(), false);
+    assert_eq!(actual_read.is_err(), true);
+}
+
+#[test]
+fn writes_and_reads_external_wrong_higher_addr() {
+    // arrange
+    let mut mem = Memory::new(0x100, 0x200);
+
+    let addr = 0x301;
+    let expected = 42u8;
+
+    // act
+    let actual_write = mem.write(addr, 42);
+    let actual_read = mem.read(addr);
+
+    // assert
+    assert_eq!(actual_write.is_ok(), false);
+    assert_eq!(actual_write.is_err(), true);
+    assert_eq!(actual_read.is_ok(), false);
+    assert_eq!(actual_read.is_err(), true);
 }

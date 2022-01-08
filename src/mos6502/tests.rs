@@ -517,9 +517,8 @@ fn functional_test() {
 
     const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;
     let mut mem = Memory::load_rom(0, "./roms/6502_functional_test.bin".to_string());
-    let mut address_bus = SimpleAddressBus::new(&mut (mem));
 
-    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut mem);
     cpu.reset();
     cpu.r.pc = 0x0400;
     cpu.wait_for_system_reset_cycles();
