@@ -1,5 +1,3 @@
-// use std::fs::File;
-
 #[cfg(test)]
 use super::*;
 use crate::address_bus::*;
@@ -540,12 +538,7 @@ fn test_gcd() {
     ];
 
     let mut mem = Memory::from_vec(0, program);
-    let mut address_bus = AddressBus::new(mem.len());
-    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
-        panic!("add_component failed");
-    }
-
-    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut mem);
     cpu.r.pc = 0x10;
 
     // act

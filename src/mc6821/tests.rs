@@ -2,28 +2,26 @@
 use super::*;
 
 #[test]
-fn Test_Input_Output() {
+fn test_apple1_keyboard_to_screen() {
     // arrange
-    const kbd: u16 = 0xd010; // read key
-    const kbdcr: u16 = 0xd011; // control port
-    const dsp: u16 = 0xd012; // write ascii
-    const dspcr: u16 = 0xd013; // control port
+    const DSP: u16 = 0xd012; // write ascii
+    const DSPCR: u16 = 0xd013; // control port
 
     let mut pia = MC6821::new();
     let expected = 0x5A;
-    let mut actual = 0u8;
+    static mut ACTUAL: u8 = 0;
 
-    fn screenOutputChannel(b: u8) {
-        actual = b;
+    fn capture(b: u8) {
+        unsafe { ACTUAL = b }
     }
 
-    pia.set_output_channel(screenOutputChannel);
+    pia.set_output_b_handler(capture);
 
     // act
-    pia.Write(dsp, 0x7F); // 01111111 -> DDRB : configure all bits except highest bit for output
-    pia.Write(dspcr, 0x04); // 00000100 -> CRB  : write to output port B
-    pia.Write(dsp, expected);
+    pia.int_write(DSP, 0x7F); // 01111111 -> DDRB : configure all bits except highest bit for output
+    pia.int_write(DSPCR, 0x04); // 00000100 -> CRB  : write to output port B
+    pia.int_write(DSP, expected);
 
     // assert
-    assert_eq!(actual, expected);
+    unsafe { assert_eq!(ACTUAL, expected) }
 }

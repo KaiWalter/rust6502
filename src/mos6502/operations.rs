@@ -1,7 +1,7 @@
 // ##### OPERATIONS ####
 use crate::mos6502::*;
 
-fn fetch(cpu: &Cpu, address_mode_values: AddressModeValues) -> u8 {
+fn fetch(cpu: &mut Cpu, address_mode_values: AddressModeValues) -> u8 {
     match address_mode_values.result {
         AddressModeResult::Absolute => {
             match cpu.address_bus.read(address_mode_values.absolute_address) {

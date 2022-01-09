@@ -1,13 +1,15 @@
 #[cfg(test)]
 mod tests;
 
-use crate::addressing::*;
+use crate::address_bus::InternalAddressing;
 
-pub enum SignalProcessing {
+#[derive(PartialEq, Clone, Copy)]
+pub enum Signal {
     Fall = 0,
     Rise = 1,
 }
 
+#[derive(PartialEq, Clone, Copy)]
 pub enum InterruptSignal {
     NoSignal = 0,
     IRQ = 1,
@@ -19,374 +21,388 @@ pub type SendOutputFunction = fn(data: u8);
 pub type SendInterruptFunction = fn(data: InterruptSignal);
 
 pub struct MC6821 {
-    nORA: u8,      // Output register A
-    nIRA: u8,      // Input register A
-    nDDRA: u8,     // data direction register A             (Output=1, Input=0)
-    nDDRA_neg: u8, // negative data direction register A    (Output=0, Input=1)
-    nCA1: Signal,  // control line A1
-    nCA2: Signal,  // control line A2
+    ora: u8,      // Output register A
+    ira: u8,      // Input register A
+    ddra: u8,     // data direction register A             (Output=1, Input=0)
+    ddra_neg: u8, // negative data direction register A    (Output=0, Input=1)
+    ca1: Signal,  // control line A1
+    ca2: Signal,  // control line A2
 
-    nCRA: u8, // control register A
-    bCRA_Bit0_EnableIRQA1: bool,
-    bCRA_Bit1_CA1_PositiveTrans: bool,
-    bCRA_Bit2_WritePort: bool,
-    bCRA_Bit3_EnableIRQA2: bool,
-    bCRA_Bit3_PulseOutput: bool,
-    bCRA_Bit3_CA2_set_high: bool,
-    bCRA_Bit4_CA2_PositiveTrans: bool,
-    bCRA_Bit4_ManualOutput: bool,
-    bCRA_Bit5_OutputMode: bool,
+    cra: u8, // control register A
+    cra_bit_0_enable_irq_a1: bool,
+    cra_bit_1_ca1_positive_trans: bool,
+    cra_bit_2_write_port: bool,
+    cra_bit_3_enable_irq_a2: bool,
+    cra_bit_3_pulse_output: bool,
+    cra_bit_3_ca2_set_high: bool,
+    cra_bit_4_ca2_positive_trans: bool,
+    cra_bit_4_manual_output: bool,
+    cra_bit_5_output_mode: bool,
 
-    nORB: u8,      // Output register B
-    nIRB: u8,      // Input register B
-    nDDRB: u8,     // data direction register B             (Output=1, Input=0)
-    nDDRB_neg: u8, // negative data direction register B    (Output=0, Input=1)
-    nCB1: Signal,  // control line B1
-    nCB2: Signal,  // control line B2
+    orb: u8,      // Output register B
+    irb: u8,      // Input register B
+    ddrb: u8,     // data direction register B             (Output=1, Input=0)
+    ddrb_neg: u8, // negative data direction register B    (Output=0, Input=1)
+    cb1: Signal,  // control line B1
+    cb2: Signal,  // control line B2
 
-    nCRB: u8, // control register B
-    bCRB_Bit0_EnableIRQB1: bool,
-    bCRB_Bit1_CB1_PositiveTrans: bool,
-    bCRB_Bit2_WritePort: bool,
-    bCRB_Bit3_EnableIRQB2: bool,
-    bCRB_Bit3_PulseOutput: bool,
-    bCRB_Bit3_CB2_set_high: bool,
-    bCRB_Bit4_CB2_PositiveTrans: bool,
-    bCRB_Bit4_ManualOutput: bool,
-    bCRB_Bit5_OutputMode: bool,
+    crb: u8, // control register B
+    crb_bit_0_enable_irq_b1: bool,
+    crb_bit_1_cb1_positive_trans: bool,
+    crb_bit_2_write_port: bool,
+    crb_bit_3_enable_irq_b2: bool,
+    crb_bit_3_pulse_output: bool,
+    crb_bit_3_cb2_set_high: bool,
+    crb_bit_4_cb2_positive_trans: bool,
+    crb_bit_4_manual_output: bool,
+    crb_bit_5_output_mode: bool,
 
-    fSendOutputA: Option<SendOutputFunction>,
-    fSendOutputB: Option<SendOutputFunction>,
-    fSendInterrupt: Option<SendInterruptFunction>,
+    send_output_a: Option<SendOutputFunction>,
+    send_output_b: Option<SendOutputFunction>,
+    send_interrupt: Option<SendInterruptFunction>,
 }
 
 impl MC6821 {
     pub fn new() -> MC6821 {
         MC6821 {
-            nORA: 0,
-            nIRA: 0xFF,
-            nIRB: 0,
-            nDDRA: 0,
-            nDDRA_neg: 0xFF,
-            nCA1: Signal::Rise,
-            nCA2: Signal::Rise,
+            ora: 0,
+            ira: 0xFF,
+            irb: 0,
+            ddra: 0,
+            ddra_neg: 0xFF,
+            ca1: Signal::Rise,
+            ca2: Signal::Rise,
 
-            nCRA: 0,
-            bCRA_Bit0_EnableIRQA1: false,
-            bCRA_Bit1_CA1_PositiveTrans: false,
-            bCRA_Bit2_WritePort: false,
-            bCRA_Bit3_EnableIRQA2: false,
-            bCRA_Bit3_PulseOutput: false,
-            bCRA_Bit3_CA2_set_high: false,
-            bCRA_Bit4_CA2_PositiveTrans: false,
-            bCRA_Bit4_ManualOutput: false,
-            bCRA_Bit5_OutputMode: false,
+            cra: 0,
+            cra_bit_0_enable_irq_a1: false,
+            cra_bit_1_ca1_positive_trans: false,
+            cra_bit_2_write_port: false,
+            cra_bit_3_enable_irq_a2: false,
+            cra_bit_3_pulse_output: false,
+            cra_bit_3_ca2_set_high: false,
+            cra_bit_4_ca2_positive_trans: false,
+            cra_bit_4_manual_output: false,
+            cra_bit_5_output_mode: false,
 
-            nORB: 0,
-            nDDRB: 0,
-            nDDRB_neg: 0xFF,
-            nCB1: Signal::Fall,
-            nCB2: Signal::Fall,
+            orb: 0,
+            ddrb: 0,
+            ddrb_neg: 0xFF,
+            cb1: Signal::Fall,
+            cb2: Signal::Fall,
 
-            nCRB: 0,
-            bCRB_Bit0_EnableIRQB1: false,
-            bCRB_Bit1_CB1_PositiveTrans: false,
-            bCRB_Bit2_WritePort: false,
-            bCRB_Bit3_EnableIRQB2: false,
-            bCRB_Bit3_PulseOutput: false,
-            bCRB_Bit3_CB2_set_high: false,
-            bCRB_Bit4_CB2_PositiveTrans: false,
-            bCRB_Bit4_ManualOutput: false,
-            bCRB_Bit5_OutputMode: false,
+            crb: 0,
+            crb_bit_0_enable_irq_b1: false,
+            crb_bit_1_cb1_positive_trans: false,
+            crb_bit_2_write_port: false,
+            crb_bit_3_enable_irq_b2: false,
+            crb_bit_3_pulse_output: false,
+            crb_bit_3_cb2_set_high: false,
+            crb_bit_4_cb2_positive_trans: false,
+            crb_bit_4_manual_output: false,
+            crb_bit_5_output_mode: false,
+
+            send_output_a: None,
+            send_output_b: None,
+            send_interrupt: None,
         }
     }
 
     fn update_control_registers(&mut self) {
         // section A -----------------------------------------
-        self.bCRA_Bit0_EnableIRQA1 = (self.nCRA & 0x01) == 0x01;
-        self.bCRA_Bit1_CA1_PositiveTrans = (self.nCRA & 0x02) == 0x02;
-        self.bCRA_Bit2_WritePort = (self.nCRA & 0x04) == 0x04;
-        self.bCRA_Bit5_OutputMode = (self.nCRA & 0x20) == 0x20;
+        self.cra_bit_0_enable_irq_a1 = (self.cra & 0x01) == 0x01;
+        self.cra_bit_1_ca1_positive_trans = (self.cra & 0x02) == 0x02;
+        self.cra_bit_2_write_port = (self.cra & 0x04) == 0x04;
+        self.cra_bit_5_output_mode = (self.cra & 0x20) == 0x20;
 
-        self.bCRA_Bit3_EnableIRQA2 = false;
-        self.bCRA_Bit3_PulseOutput = false;
-        self.bCRA_Bit3_CA2_set_high = false;
-        self.bCRA_Bit4_CA2_PositiveTrans = false;
-        self.bCRA_Bit4_ManualOutput = false;
+        self.cra_bit_3_enable_irq_a2 = false;
+        self.cra_bit_3_pulse_output = false;
+        self.cra_bit_3_ca2_set_high = false;
+        self.cra_bit_4_ca2_positive_trans = false;
+        self.cra_bit_4_manual_output = false;
 
-        if (self.bCRA_Bit5_OutputMode) {
-            self.bCRA_Bit4_ManualOutput = (self.nCRA & 0x10) == 0x10;
-            if (self.bCRA_Bit4_ManualOutput) {
-                self.bCRA_Bit3_CA2_set_high = (self.nCRA & 0x08) == 0x08;
-                nCA2 = if self.bCRA_Bit3_CA2_set_high {
+        if self.cra_bit_5_output_mode {
+            self.cra_bit_4_manual_output = (self.cra & 0x10) == 0x10;
+            if self.cra_bit_4_manual_output {
+                self.cra_bit_3_ca2_set_high = (self.cra & 0x08) == 0x08;
+                self.ca2 = if self.cra_bit_3_ca2_set_high {
                     Signal::Rise
                 } else {
                     Signal::Fall
                 };
             } else {
-                self.bCRA_Bit3_PulseOutput = (self.nCRA & 0x08) == 0x08;
+                self.cra_bit_3_pulse_output = (self.cra & 0x08) == 0x08;
             }
         } else {
-            self.bCRA_Bit3_EnableIRQA2 = (self.nCRA & 0x08) == 0x08;
-            self.bCRA_Bit4_CA2_PositiveTrans = (self.nCRA & 0x10) == 0x10;
+            self.cra_bit_3_enable_irq_a2 = (self.cra & 0x08) == 0x08;
+            self.cra_bit_4_ca2_positive_trans = (self.cra & 0x10) == 0x10;
         }
 
         // section B -----------------------------------------
-        self.bCRB_Bit0_EnableIRQB1 = (self.nCRB & 0x01) == 0x01;
-        self.bCRB_Bit1_CB1_PositiveTrans = (self.nCRB & 0x02) == 0x02;
-        self.bCRB_Bit2_WritePort = (self.nCRB & 0x04) == 0x04;
-        self.bCRB_Bit5_OutputMode = (self.nCRB & 0x20) == 0x20;
+        self.crb_bit_0_enable_irq_b1 = (self.crb & 0x01) == 0x01;
+        self.crb_bit_1_cb1_positive_trans = (self.crb & 0x02) == 0x02;
+        self.crb_bit_2_write_port = (self.crb & 0x04) == 0x04;
+        self.crb_bit_5_output_mode = (self.crb & 0x20) == 0x20;
 
-        self.bCRB_Bit3_EnableIRQB2 = false;
-        self.bCRB_Bit3_PulseOutput = false;
-        self.bCRB_Bit3_CB2_set_high = false;
-        self.bCRB_Bit4_CB2_PositiveTrans = false;
-        self.bCRB_Bit4_ManualOutput = false;
+        self.crb_bit_3_enable_irq_b2 = false;
+        self.crb_bit_3_pulse_output = false;
+        self.crb_bit_3_cb2_set_high = false;
+        self.crb_bit_4_cb2_positive_trans = false;
+        self.crb_bit_4_manual_output = false;
 
-        if (self.bCRB_Bit5_OutputMode) {
-            self.bCRB_Bit4_ManualOutput = (self.nCRB & 0x10) == 0x10;
-            if (self.bCRB_Bit4_ManualOutput) {
-                self.bCRB_Bit3_CB2_set_high = (self.nCRB & 0x08) == 0x08;
-                nCB2 = if self.bCRB_Bit3_CB2_set_high {
+        if self.crb_bit_5_output_mode {
+            self.crb_bit_4_manual_output = (self.crb & 0x10) == 0x10;
+            if self.crb_bit_4_manual_output {
+                self.crb_bit_3_cb2_set_high = (self.crb & 0x08) == 0x08;
+                self.cb2 = if self.crb_bit_3_cb2_set_high {
                     Signal::Rise
                 } else {
                     Signal::Fall
                 };
             } else {
-                self.bCRB_Bit3_PulseOutput = (self.nCRB & 0x08) == 0x08;
+                self.crb_bit_3_pulse_output = (self.crb & 0x08) == 0x08;
             }
         } else {
-            self.bCRB_Bit3_EnableIRQB2 = (self.nCRB & 0x08) == 0x08;
-            self.bCRB_Bit4_CB2_PositiveTrans = (self.nCRB & 0x10) == 0x10;
+            self.crb_bit_3_enable_irq_b2 = (self.crb & 0x08) == 0x08;
+            self.crb_bit_4_cb2_positive_trans = (self.crb & 0x10) == 0x10;
         }
     }
 
-    fn update_IRQ() {
-        if (self.bCRA_Bit0_EnableIRQA1 && (self.nCRA & 0x80) == 0x80)
-            || (self.bCRA_Bit3_EnableIRQA2 && (self.nCRA & 0x40) == 0x40)
-            || (self.bCRB_Bit0_EnableIRQB1 && (self.nCRB & 0x80) == 0x80)
-            || (self.bCRB_Bit3_EnableIRQB2 && (self.nCRB & 0x40) == 0x40)
+    fn update_irq(&self) {
+        if (self.cra_bit_0_enable_irq_a1 && (self.cra & 0x80) == 0x80)
+            || (self.cra_bit_3_enable_irq_a2 && (self.cra & 0x40) == 0x40)
+            || (self.crb_bit_0_enable_irq_b1 && (self.crb & 0x80) == 0x80)
+            || (self.crb_bit_3_enable_irq_b2 && (self.crb & 0x40) == 0x40)
         {
-            match fSendInterrupt {
-                Some(f) => f(Interrupt::IRQ),
+            match self.send_interrupt {
+                Some(f) => f(InterruptSignal::IRQ),
                 None => (),
             }
         }
     }
 
-    pub fn setInputA(&mut self, b: u8) {
-        self.nIRA = b;
+    pub fn set_input_a(&mut self, b: u8) {
+        self.ira = b;
     }
 
-    pub fn setInputB(&mut self, b: u8) {
-        self.nIRB = b;
+    pub fn set_input_b(&mut self, b: u8) {
+        self.irb = b;
     }
 
-    pub fn setOutputAHandler(&mut self, f: Option<Fn(u8)>) {
-        self.fOutputA = f;
+    pub fn set_output_a_handler(&mut self, f: SendOutputFunction) {
+        self.send_output_a = Some(f);
     }
 
-    pub fn setOutputBHandler(&mut self, f: Option<Fn(u8)>) {
-        self.fOutputB = f;
+    pub fn set_output_b_handler(&mut self, f: SendOutputFunction) {
+        self.send_output_b = Some(f);
     }
 
-    pub fn setInterruptHandler(&mut self, f: Option<Fn(Interrupt)>) {
-        self.fSendInterrupt = f;
+    pub fn set_interrupt_handler(&mut self, f: SendInterruptFunction) {
+        self.send_interrupt = Some(f);
     }
 
-    pub fn setCA1(&mut self, s: Signal) {
+    pub fn set_ca1(&mut self, s: Signal) {
         // flag interrupt
-        if (self.nCA1 != b
-            && (if self.bCRA_Bit1_CA1_PositiveTrans {
+        if self.ca1 != s
+            && (if self.cra_bit_1_ca1_positive_trans {
                 Signal::Rise
             } else {
                 Signal::Fall
-            }) == b)
+            }) == s
         {
-            self.nCRA |= 0x80; // set bit 7 IRQA1
-            self.updateIRQ();
-            if (self.bCRA_Bit5_OutputMode
-                && !self.bCRA_Bit4_ManualOutput
-                && !self.bCRA_Bit3_PulseOutput)
+            self.cra |= 0x80; // set bit 7 IRQA1
+            self.update_irq();
+            if self.cra_bit_5_output_mode
+                && !self.cra_bit_4_manual_output
+                && !self.cra_bit_3_pulse_output
             {
                 // handshake mode
-                self.nCA2 = Signal::Rise;
+                self.ca2 = Signal::Rise;
             }
         }
-        self.nCA1 = b;
+        self.ca1 = s;
     }
 
-    pub fn getCA1(&self) -> Signal {
-        self.nCA1
+    pub fn get_ca1(&self) -> Signal {
+        self.ca1
     }
 
-    pub fn setCA2(&mut self, s: Signal) {
+    pub fn set_ca2(&mut self, s: Signal) {
         // flag interrupt
-        if (self.nCA2 != b
-            && (if self.bCRA_Bit1_CA2_PositiveTrans {
+        if self.ca2 != s
+            && (if self.cra_bit_4_ca2_positive_trans {
                 Signal::Rise
             } else {
                 Signal::Fall
-            }) == b)
+            }) == s
         {
-            self.nCRA |= 0x40; // set bit 6 IRQA2
-            self.updateIRQ();
+            self.cra |= 0x40; // set bit 6 IRQA2
+            self.update_irq();
         }
-        self.nCA1 = b;
+        self.ca1 = s;
     }
 
-    pub fn getCA2(&self) -> Signal {
-        self.nCA2
+    pub fn get_ca2(&self) -> Signal {
+        self.ca2
     }
 
-    pub fn setCB1(&mut self, s: Signal) {
+    pub fn set_cb1(&mut self, s: Signal) {
         // flag interrupt
-        if (self.nCB1 != b
-            && (if self.bCRB_Bit1_CB1_PositiveTrans {
+        if self.cb1 != s
+            && (if self.crb_bit_1_cb1_positive_trans {
                 Signal::Rise
             } else {
                 Signal::Fall
-            }) == b)
+            }) == s
         {
-            self.nCRB |= 0x80; // set bit 7 IRQB1
-            self.updateIRQ();
-            if (self.bCRB_Bit5_OutputMode
-                && !self.bCRB_Bit4_ManualOutput
-                && !self.bCRB_Bit3_PulseOutput)
+            self.crb |= 0x80; // set bit 7 IRQB1
+            self.update_irq();
+            if self.crb_bit_5_output_mode
+                && !self.crb_bit_4_manual_output
+                && !self.crb_bit_3_pulse_output
             {
                 // handshake mode
-                self.nCB2 = Signal::Rise;
+                self.cb2 = Signal::Rise;
             }
         }
-        self.nCB1 = b;
+        self.cb1 = s;
     }
 
-    pub fn getCB1(&self) -> Signal {
-        self.nCB1
+    pub fn get_cb1(&self) -> Signal {
+        self.cb1
     }
 
-    pub fn setCB2(&mut self, s: Signal) {
+    pub fn set_cb2(&mut self, s: Signal) {
         // flag interrupt
-        if (self.nCB2 != b
-            && (if self.bCRB_Bit1_CB2_PositiveTrans {
+        if self.cb2 != s
+            && (if self.crb_bit_4_cb2_positive_trans {
                 Signal::Rise
             } else {
                 Signal::Fall
-            }) == b)
+            }) == s
         {
-            self.nCRB |= 0x40; // set bit 6 IRQB2
-            self.updateIRQ();
+            self.crb |= 0x40; // set bit 6 IRQB2
+            self.update_irq();
         }
-        self.nCB1 = b;
+        self.cb1 = s;
     }
 
-    pub fn getCB2(&self) -> Signal {
-        self.nCB2
+    pub fn get_cb2(&self) -> Signal {
+        self.cb2
     }
 }
 
-impl Addressing for MC6821 {
-    fn read(&self, addr: u16) -> u8 {
-        let reg = addr & 0x03;
+impl InternalAddressing for MC6821 {
+    fn int_read(&mut self, addr: u16) -> u8 {
+        let reg = (addr & 0x03) as u8;
         let mut data = 0u8;
 
         match reg {
             // PA
             0 => {
-                self.nCRA &= 0x3F; // IRQ flags implicitly cleared by a read
+                self.cra &= 0x3F; // IRQ flags implicitly cleared by a read
 
                 // mix input and output
-                data |= self.nORA & self.nDDRA;
-                data |= self.nIRA & self.nDDRA_neg;
+                data |= self.ora & self.ddra;
+                data |= self.ira & self.ddra_neg;
             }
 
             // CRA
             1 => {
-                data = self.nCRA;
+                data = self.cra;
             }
 
             // PB
             2 => {
-                self.nCRB &= 0x3F; // IRQ flags implicitly cleared by a read
+                self.crb &= 0x3F; // IRQ flags implicitly cleared by a read
 
                 // mix input and output
-                data |= self.nORB & self.nDDRB;
-                data |= self.nIRB & self.nDDRB_neg;
+                data |= self.orb & self.ddrb;
+                data |= self.irb & self.ddrb_neg;
             }
 
             // CRB
             3 => {
-                data = self.nCRB;
+                data = self.crb;
             }
+
+            4_u8..=u8::MAX => (),
         }
 
         data
     }
 
-    fn write(&mut self, addr: u16, data: u8) {
-        let reg = addr & 0x03;
+    fn int_write(&mut self, addr: u16, data: u8) {
+        let reg = (addr & 0x03) as u8;
 
         match reg {
             // DDRA / PA
             0 => {
-                if (bCRA_Bit2_WritePort) {
-                    nORA = data; // into output register A
-                    match fSendOutputA {
+                if self.cra_bit_2_write_port {
+                    self.ora = data; // into output register A
+                    match self.send_output_a {
                         Some(f) => {
                             // mix input and output
-                            let bOut = 0u8;
-                            bOut |= nORA & nDDRA;
-                            bOut |= nIRA & nDDRA_neg;
-                            f(bOut);
+                            let mut out = 0u8;
+                            out |= self.ora & self.ddra;
+                            out |= self.ira & self.ddra_neg;
+                            f(out);
                         }
+                        None => (),
                     }
                 } else {
-                    nDDRA = data; // into data direction register A
-                    nDDRA_neg = !data;
+                    self.ddra = data; // into data direction register A
+                    self.ddra_neg = !data;
                 }
             }
 
             // CRA
             1 => {
-                self.nCRA = (self.nCRA & 0xC0) | (data & 0x3F); // do not change IRQ flags
+                self.cra = (self.cra & 0xC0) | (data & 0x3F); // do not change IRQ flags
                 self.update_control_registers();
-                self.update_IRQ();
+                self.update_irq();
             }
 
             // DDRB / PB
             2 => {
-                if (bCRB_Bit2_WritePort) {
-                    nORB = data; // into output register B
-                    match fSendOutputB {
+                if self.crb_bit_2_write_port {
+                    self.orb = data; // into output register B
+                    match self.send_output_b {
                         Some(f) => {
                             // mix input and output
-                            let bOut = 0u8;
-                            bOut |= self.nORB & self.nDDRB;
-                            bOut |= self.nIRB & self.nDDRB_neg;
-                            f(bOut);
+                            let mut out = 0u8;
+                            out |= self.orb & self.ddrb;
+                            out |= self.irb & self.ddrb_neg;
+                            f(out);
 
-                            if (self.bCRB_Bit5_OutputMode && !self.bCRB_Bit4_ManualOutput)
+                            if self.crb_bit_5_output_mode && !self.crb_bit_4_manual_output
                             // handshake on write mode
                             {
-                                self.nCB2 = Signal::Fall;
-                                if self.bCRB_Bit3_PulseOutput {
-                                    self.nCB2 = Signal::Rise
+                                self.cb2 = Signal::Fall;
+                                if self.crb_bit_3_pulse_output {
+                                    self.cb2 = Signal::Rise
                                 };
                             }
                         }
+                        None => (),
                     }
                 } else {
-                    self.nDDRB = data; // into data direction register B
-                    self.nDDRB_neg = !data;
+                    self.ddrb = data; // into data direction register B
+                    self.ddrb_neg = !data;
                 }
             }
 
             // CRB
             3 => {
-                self.nCRB = (self.nCRB & 0xC0) | (data & 0x3F); // do not change IRQ flags
+                self.crb = (self.crb & 0xC0) | (data & 0x3F); // do not change IRQ flags
                 self.update_control_registers();
-                self.update_IRQ();
+                self.update_irq();
             }
+
+            4_u8..=u8::MAX => (),
         }
+    }
+
+    fn len(&self) -> usize {
+        0
     }
 }

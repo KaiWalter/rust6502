@@ -1,10 +1,5 @@
-mod address_bus;
-mod memory;
-mod mos6502;
-
-use address_bus::*;
-use memory::*;
-use mos6502::*;
+use rust6502::memory::*;
+use rust6502::mos6502::*;
 
 fn main() {
     const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;

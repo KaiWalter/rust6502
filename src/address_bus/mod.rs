@@ -25,13 +25,13 @@ impl fmt::Display for AddressingError {
 }
 
 pub trait InternalAddressing {
-    fn int_read(&self, addr: u16) -> u8;
+    fn int_read(&mut self, addr: u16) -> u8;
     fn int_write(&mut self, addr: u16, data: u8);
     fn len(&self) -> usize;
 }
 
 pub trait ExternalAddressing {
-    fn read(&self, addr: u16) -> Result<u8, AddressingError>;
+    fn read(&mut self, addr: u16) -> Result<u8, AddressingError>;
     fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError>;
 }
 
@@ -77,13 +77,13 @@ impl<'a> AddressBus<'a> {
 }
 
 impl ExternalAddressing for AddressBus<'_> {
-    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+    fn read(&mut self, addr: u16) -> Result<u8, AddressingError> {
         let block = addr as usize / self.block_size;
         if self.block_component_map[block] == usize::MAX {
             Err(AddressingError::new("read", addr))
         } else {
             let component_key = self.block_component_map[block];
-            match self.component_addr.get(component_key) {
+            match self.component_addr.get_mut(component_key) {
                 Some(component) => Ok(component.int_read(addr)),
                 None => Err(AddressingError::new("read", addr)),
             }

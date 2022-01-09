@@ -7,3 +7,11 @@ authors = ["Kai Walter <ancientitguy@outlook.com>"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+
+[lib]
+name = "rust6502"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rust6502"
+path = "src/main.rs"

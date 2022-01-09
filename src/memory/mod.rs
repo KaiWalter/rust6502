@@ -42,7 +42,7 @@ impl Memory {
 }
 
 impl InternalAddressing for Memory {
-    fn int_read(&self, addr: u16) -> u8 {
+    fn int_read(&mut self, addr: u16) -> u8 {
         self.mem[(addr - self.offset) as usize]
     }
 
@@ -56,7 +56,7 @@ impl InternalAddressing for Memory {
 }
 
 impl ExternalAddressing for Memory {
-    fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+    fn read(&mut self, addr: u16) -> Result<u8, AddressingError> {
         if addr < self.offset || (addr - self.offset) as usize >= self.mem.len() {
             Err(AddressingError::new("read", addr))
         } else {
