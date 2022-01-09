@@ -3,8 +3,6 @@ mod tests;
 
 use std::fmt;
 
-use crate::memory::Memory;
-
 #[derive(Debug)]
 pub struct AddressingError {
     operation: String,
