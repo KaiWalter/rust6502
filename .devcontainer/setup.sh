@@ -1,27 +1,38 @@
-## update and install some things we should probably have
+## update and install 1st level of packages
 apt-get update
 apt-get install -y \
-  curl \
-  git \
-  gnupg2 \
-  jq \
-  sudo \
-  zsh \
-  vim \
-  build-essential \
-  openssl \
-  unzip
+curl \
+git \
+gnupg2 \
+jq \
+sudo \
+zsh \
+build-essential \
+libssl-dev \
+openssl \
+unzip
+
+## update and install 2nd level of packages
+curl -fsSL https://deb.nodesource.com/setup_17.x | sudo -E bash -
+
+apt-get update
+apt-get install -y \
+pkg-config \
+nodejs
 
 ## Install rustup and common components
-curl https://sh.rustup.rs -sSf | sh -s -- -y 
+curl https://sh.rustup.rs -sSf | sh -s -- -y
 rustup install nightly
 rustup component add rustfmt
 rustup component add rustfmt --toolchain nightly
-rustup component add clippy 
+rustup component add clippy
 rustup component add clippy --toolchain nightly
 
 cargo install cargo-expand
 cargo install cargo-edit
+
+cargo install wasm-pack
+cargo install cargo-generate
 
 ## setup and install oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
