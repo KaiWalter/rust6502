@@ -508,6 +508,59 @@ fn test_ld_axy_st_axy() {
     assert_eq!(expected + 2, cpu.address_bus.read(0x12).unwrap());
 }
 
+#[test]
+fn test_gcd() {
+    // arrange
+    let fizz = 35u8;
+    let buzz = 20u8;
+
+    let expected = 5u8;
+
+    // credits to https://github.com/mre/mos6502/blob/master/examples/euclidean_algo.rs
+    let program = vec![
+        // (F)irst | (S)econd
+        fizz, buzz, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, // .algo
+        0xa5, 0x00, // Load from F to A
+        // .algo_
+        0x38, // Set carry flag
+        0xe5, 0x01, // Substract S from number in A (from F)
+        0xf0, 0x07, // Jump to .end if diff is zero
+        0x30, 0x08, // Jump to .swap if diff is negative
+        0x85, 0x00, // Load A to F
+        0x4c, 0x12, 0x00, // Jump to .algo_
+        // .end
+        0xa5, 0x00, // Load from S to A
+        0xff, // .swap
+        0xa6, 0x00, // load F to X
+        0xa4, 0x01, // load S to Y
+        0x86, 0x01, // Store X to F
+        0x84, 0x00, // Store Y to S
+        0x4c, 0x10, 0x00, // Jump to .algo
+    ];
+
+    let mut mem = Memory::from_vec(0, program);
+    let mut address_bus = AddressBus::new(mem.len());
+    if address_bus.add_component(0, mem.len(), &mut (mem)).is_err() {
+        panic!("add_component failed");
+    }
+
+    let mut cpu = Cpu::new(CpuRegisters::default(), &mut address_bus);
+    cpu.r.pc = 0x10;
+
+    // act
+    let mut stop = false;
+    while !stop {
+        cpu.cycle(true);
+        if let Ok(opcode) = cpu.address_bus.read(cpu.r.pc) {
+            stop = opcode == 0xFF;
+        }
+    }
+
+    // assert
+    assert_eq!(expected, cpu.r.a);
+}
+
 // ##### TEST ROMS ####
 
 #[test]
