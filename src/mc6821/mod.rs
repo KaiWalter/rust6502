@@ -2,6 +2,8 @@
 mod tests;
 
 use crate::address_bus::InternalAddressing;
+use std::sync::mpsc;
+use std::sync::mpsc::{Receiver, Sender};
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum Signal {
@@ -57,9 +59,9 @@ pub struct MC6821 {
     crb_bit_4_manual_output: bool,
     crb_bit_5_output_mode: bool,
 
-    send_output_a: Option<SendOutputFunction>,
-    send_output_b: Option<SendOutputFunction>,
-    send_interrupt: Option<SendInterruptFunction>,
+    output_channel_a: Option<Sender<u8>>,
+    output_channel_b: Option<Sender<u8>>,
+    interrupt_channel: Option<Sender<InterruptSignal>>,
 }
 
 impl MC6821 {
@@ -101,9 +103,9 @@ impl MC6821 {
             crb_bit_4_manual_output: false,
             crb_bit_5_output_mode: false,
 
-            send_output_a: None,
-            send_output_b: None,
-            send_interrupt: None,
+            output_channel_a: None,
+            output_channel_b: None,
+            interrupt_channel: None,
         }
     }
 
@@ -173,8 +175,8 @@ impl MC6821 {
             || (self.crb_bit_0_enable_irq_b1 && (self.crb & 0x80) == 0x80)
             || (self.crb_bit_3_enable_irq_b2 && (self.crb & 0x40) == 0x40)
         {
-            match self.send_interrupt {
-                Some(f) => f(InterruptSignal::IRQ),
+            match &self.interrupt_channel {
+                Some(tx) => tx.send(InterruptSignal::IRQ).unwrap(),
                 None => (),
             }
         }
@@ -188,16 +190,16 @@ impl MC6821 {
         self.irb = b;
     }
 
-    pub fn set_output_a_handler(&mut self, f: SendOutputFunction) {
-        self.send_output_a = Some(f);
+    pub fn set_output_channel_a(&mut self, tx: Sender<u8>) {
+        self.output_channel_a = Some(tx);
     }
 
-    pub fn set_output_b_handler(&mut self, f: SendOutputFunction) {
-        self.send_output_b = Some(f);
+    pub fn set_output_channel_b(&mut self, tx: Sender<u8>) {
+        self.output_channel_b = Some(tx);
     }
 
-    pub fn set_interrupt_handler(&mut self, f: SendInterruptFunction) {
-        self.send_interrupt = Some(f);
+    pub fn set_interrupt_channel(&mut self, tx: Sender<InterruptSignal>) {
+        self.interrupt_channel = Some(tx);
     }
 
     pub fn set_ca1(&mut self, s: Signal) {
@@ -339,13 +341,13 @@ impl InternalAddressing for MC6821 {
             0 => {
                 if self.cra_bit_2_write_port {
                     self.ora = data; // into output register A
-                    match self.send_output_a {
-                        Some(f) => {
+                    match &self.output_channel_a {
+                        Some(tx) => {
                             // mix input and output
                             let mut out = 0u8;
                             out |= self.ora & self.ddra;
                             out |= self.ira & self.ddra_neg;
-                            f(out);
+                            tx.send(out).unwrap();
                         }
                         None => (),
                     }
@@ -366,13 +368,13 @@ impl InternalAddressing for MC6821 {
             2 => {
                 if self.crb_bit_2_write_port {
                     self.orb = data; // into output register B
-                    match self.send_output_b {
-                        Some(f) => {
+                    match &self.output_channel_b {
+                        Some(tx) => {
                             // mix input and output
                             let mut out = 0u8;
                             out |= self.orb & self.ddrb;
                             out |= self.irb & self.ddrb_neg;
-                            f(out);
+                            tx.send(out).unwrap();
 
                             if self.crb_bit_5_output_mode && !self.crb_bit_4_manual_output
                             // handshake on write mode
