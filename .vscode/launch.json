@@ -8,7 +8,7 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=rust6502",
+                    "--bin=apple1",
                     "--package=rust6502"
                 ],
                 "filter": {

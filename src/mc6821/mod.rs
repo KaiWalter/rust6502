@@ -19,8 +19,14 @@ pub enum InterruptSignal {
     BRK = 3,
 }
 
-pub type SendOutputFunction = fn(data: u8);
-pub type SendInterruptFunction = fn(data: InterruptSignal);
+pub enum InputSignal {
+    IRA(u8),
+    IRB(u8),
+    CA1(Signal),
+    CA2(Signal),
+    CB1(Signal),
+    CB2(Signal),
+}
 
 pub struct MC6821 {
     ora: u8,      // Output register A
@@ -59,6 +65,7 @@ pub struct MC6821 {
     crb_bit_4_manual_output: bool,
     crb_bit_5_output_mode: bool,
 
+    input_channel: Option<Receiver<InputSignal>>,
     output_channel_a: Option<Sender<u8>>,
     output_channel_b: Option<Sender<u8>>,
     interrupt_channel: Option<Sender<InterruptSignal>>,
@@ -103,6 +110,7 @@ impl MC6821 {
             crb_bit_4_manual_output: false,
             crb_bit_5_output_mode: false,
 
+            input_channel: None,
             output_channel_a: None,
             output_channel_b: None,
             interrupt_channel: None,
@@ -182,12 +190,27 @@ impl MC6821 {
         }
     }
 
-    pub fn set_input_a(&mut self, b: u8) {
-        self.ira = b;
+    pub fn set_input_channel(&mut self, rx: Receiver<InputSignal>) {
+        self.input_channel = Some(rx);
     }
 
-    pub fn set_input_b(&mut self, b: u8) {
-        self.irb = b;
+    pub fn process_input(&mut self) {
+        loop {
+            match &self.input_channel {
+                Some(rx) => match rx.try_recv() {
+                    Ok(input) => match input {
+                        InputSignal::IRA(b) => self.ira = b,
+                        InputSignal::IRB(b) => self.irb = b,
+                        InputSignal::CA1(s) => self.set_ca1(s),
+                        InputSignal::CA2(s) => self.set_ca2(s),
+                        InputSignal::CB1(s) => self.set_cb1(s),
+                        InputSignal::CB2(s) => self.set_cb2(s),
+                    },
+                    Err(_) => break,
+                },
+                None => (),
+            }
+        }
     }
 
     pub fn set_output_channel_a(&mut self, tx: Sender<u8>) {
@@ -202,7 +225,7 @@ impl MC6821 {
         self.interrupt_channel = Some(tx);
     }
 
-    pub fn set_ca1(&mut self, s: Signal) {
+    fn set_ca1(&mut self, s: Signal) {
         // flag interrupt
         if self.ca1 != s
             && (if self.cra_bit_1_ca1_positive_trans {
@@ -228,7 +251,7 @@ impl MC6821 {
         self.ca1
     }
 
-    pub fn set_ca2(&mut self, s: Signal) {
+    fn set_ca2(&mut self, s: Signal) {
         // flag interrupt
         if self.ca2 != s
             && (if self.cra_bit_4_ca2_positive_trans {
@@ -247,7 +270,7 @@ impl MC6821 {
         self.ca2
     }
 
-    pub fn set_cb1(&mut self, s: Signal) {
+    fn set_cb1(&mut self, s: Signal) {
         // flag interrupt
         if self.cb1 != s
             && (if self.crb_bit_1_cb1_positive_trans {
@@ -273,7 +296,7 @@ impl MC6821 {
         self.cb1
     }
 
-    pub fn set_cb2(&mut self, s: Signal) {
+    fn set_cb2(&mut self, s: Signal) {
         // flag interrupt
         if self.cb2 != s
             && (if self.crb_bit_4_cb2_positive_trans {
@@ -295,6 +318,8 @@ impl MC6821 {
 
 impl InternalAddressing for MC6821 {
     fn int_read(&mut self, addr: u16) -> u8 {
+        self.process_input();
+
         let reg = (addr & 0x03) as u8;
         let mut data = 0u8;
 

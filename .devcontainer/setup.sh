@@ -8,7 +8,7 @@ jq \
 sudo \
 zsh \
 build-essential \
-libssl-dev \
+libssl-dev libncurses5-dev libncursesw5-dev \
 openssl \
 unzip
 

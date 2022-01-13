@@ -4,18 +4,17 @@ use std::{thread, time::Duration};
 use super::*;
 
 #[test]
-fn test_input_channel() {
+fn test_output_channel() {
     // arrange
     const DSP: u16 = 0xd012; // write ascii
     const DSPCR: u16 = 0xd013; // control port
 
     let mut pia = MC6821::new();
+    let (tx, rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
+    pia.set_output_channel_b(tx);
+
     let expected = 0x5A;
     static mut ACTUAL: u8 = 0;
-
-    let (tx, rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
-
-    pia.set_output_channel_b(tx);
 
     // act
     let capture_thread = thread::spawn(move || {
@@ -43,4 +42,21 @@ fn test_input_channel() {
 
     // assert
     unsafe { assert_eq!(ACTUAL, expected) }
+}
+
+#[test]
+fn test_input_channel() {
+    // arrange
+    let mut pia = MC6821::new();
+    let (tx, rx): (Sender<InputSignal>, Receiver<InputSignal>) = mpsc::channel();
+    pia.set_input_channel(rx);
+
+    const KBD: u16 = 0xd010; // read ascii
+    let expected = 0x5A;
+
+    // act
+    tx.send(InputSignal::IRA(expected)).unwrap();
+
+    // assert
+    assert_eq!(pia.int_read(KBD), expected);
 }

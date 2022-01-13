@@ -361,6 +361,14 @@ impl<'a> Cpu<'a> {
         }
     }
 
+    pub fn write(&mut self, addr: u16, b: u8) {
+        self.address_bus.write(addr, b).unwrap();
+    }
+
+    pub fn read(&mut self, addr: u16) -> u8 {
+        self.address_bus.read(addr).unwrap()
+    }
+
     // ##### FLAGS ####
     pub fn set_flag(&mut self, flag: StatusFlag, value: bool) {
         if value {
