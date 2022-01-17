@@ -2,5 +2,6 @@
 
 members = [
     "core",
-    "apple1"
+    "apple1",
+    "apple1-wasm"
 ]

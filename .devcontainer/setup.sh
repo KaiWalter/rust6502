@@ -22,6 +22,9 @@ nodejs
 
 ## Install rustup and common components
 curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+export PATH=/root/.cargo/bin:$PATH
+
 rustup install nightly
 rustup component add rustfmt
 rustup component add rustfmt --toolchain nightly
