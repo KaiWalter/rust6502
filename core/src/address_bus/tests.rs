@@ -127,7 +127,7 @@ fn invalid_mem_block_size() {
 #[test]
 fn load_rom() {
     // arrange
-    let mut rom_monitor = Memory::load_rom(0xFF00, "./roms/Apple1_HexMonitor.bin".to_string());
+    let mut rom_monitor = Memory::load_rom(0xFF00, "../roms/Apple1_HexMonitor.bin".to_string());
     let mut address_bus = AddressBus::new(0x100);
     if address_bus
         .add_component(0xFF00, rom_monitor.len(), &mut (rom_monitor))

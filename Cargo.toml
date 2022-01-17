@@ -1,24 +1,6 @@
-[package]
-name = "rust6502"
-version = "0.1.0"
-edition = "2021"
-authors = ["Kai Walter <ancientitguy@outlook.com>"]
-readme = "README.md"
-default-run = "apple1-console"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-ncurses = "5.101.0"
-
-[lib]
-name = "rust6502"
-path = "src/lib.rs"
-
-[[bin]]
-name = "apple1-console"
-path = "src/apple1-console.rs"
-
-[[bin]]
-name = "functional-test"
-path = "src/functional-test.rs"
+members = [
+    "core",
+    "apple1"
+]

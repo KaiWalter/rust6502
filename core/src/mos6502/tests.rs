@@ -562,7 +562,7 @@ fn functional_test() {
     // let mut w = File::create("func-rust.txt").unwrap();
 
     const END_OF_FUNCTIONAL_TEST: u16 = 0x3469;
-    let mut mem = Memory::load_rom(0, "./roms/6502_functional_test.bin".to_string());
+    let mut mem = Memory::load_rom(0, "../roms/6502_functional_test.bin".to_string());
 
     let mut cpu = Cpu::new(CpuRegisters::default(), &mut mem);
     cpu.reset();
@@ -617,7 +617,7 @@ fn decimal_test() {
         panic!("add_component failed");
     }
 
-    let mut rom = Memory::load_rom(0x200, "./roms/6502_decimal_test.bin".to_string());
+    let mut rom = Memory::load_rom(0x200, "../roms/6502_decimal_test.bin".to_string());
     rom.fill(0x200, 0);
     if address_bus
         .add_component(0x0200, rom.len(), &mut (rom))

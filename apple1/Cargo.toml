@@ -1,0 +1,11 @@
+[package]
+name = "apple1"
+version = "0.1.0"
+edition = "2021"
+authors = ["Kai Walter <ancientitguy@outlook.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ncurses = "5.101.0"
+rust6502 = { path = "../core" }
