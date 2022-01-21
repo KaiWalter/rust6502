@@ -1,13 +1,30 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WASM Apple1</title>
+    <style>
+        body {
+            margin: 0, 0, 0, 0;
+            background-color: black;
+            color: lightgreen;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #canvas {
+            outline: lightgreen 3px solid;
+            background-color: black;
+        }
+    </style>
 </head>
 
 <body>
-    <canvas id="canvas" height="150" width="150"></canvas>
+    <!-- 40x25 characters with 2x2 pixelsize -->
+    <h1>Apple 1 emulator</h1>
+    <hr />
+    <canvas id="canvas"></canvas>
     <script type="module">
         import init, { start } from "./pkg/apple1_wasm.js";
         init()
