@@ -501,6 +501,10 @@ impl<'a> Cpu<'a> {
         }
     }
 
+    pub fn completed_operation_cycles(&mut self) -> bool {
+        self.remaining_cycles == 0
+    }
+
     pub fn run(&mut self, from_addr: u16, to_addr: u16) {
         self.reset();
         self.r.pc = from_addr;

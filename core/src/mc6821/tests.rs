@@ -10,7 +10,10 @@ fn test_output_channel() {
     const DSPCR: u16 = 0xd013; // control port
 
     let mut pia = MC6821::new();
-    let (tx, rx): (Sender<u8>, Receiver<u8>) = mpsc::channel();
+    let (tx, rx): (
+        crossbeam_channel::Sender<u8>,
+        crossbeam_channel::Receiver<u8>,
+    ) = crossbeam_channel::unbounded();
     pia.set_output_channel_b(tx);
 
     let expected = 0x5A;
@@ -48,7 +51,10 @@ fn test_output_channel() {
 fn test_input_channel() {
     // arrange
     let mut pia = MC6821::new();
-    let (tx, rx): (Sender<InputSignal>, Receiver<InputSignal>) = mpsc::channel();
+    let (tx, rx): (
+        crossbeam_channel::Sender<InputSignal>,
+        crossbeam_channel::Receiver<InputSignal>,
+    ) = crossbeam_channel::unbounded();
     pia.set_input_channel(rx);
 
     const KBD: u16 = 0xd010; // read ascii

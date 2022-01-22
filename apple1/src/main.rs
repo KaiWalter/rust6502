@@ -4,8 +4,7 @@ extern crate ncurses;
 use ncurses::*;
 
 use core::time;
-use std::sync::mpsc::{self, TryRecvError};
-use std::sync::mpsc::{Receiver, Sender};
+use crossbeam_channel::*;
 use std::thread;
 
 use rust6502::address_bus::*;
@@ -23,7 +22,7 @@ impl ConsoleTerminal {
         noecho();
         addstr("Apple1 console - hit Ctrl-C to quit\n\n");
 
-        let (tx_input, rx_input) = mpsc::channel();
+        let (tx_input, rx_input) = unbounded();
         thread::spawn(move || loop {
             tx_input.send(getch() as u8).unwrap();
         });
@@ -67,13 +66,13 @@ fn main() {
     let mut pia = MC6821::new();
 
     // channel from PIA to terminal (PIA=tx, terminal=rx)
-    let (tx_apple_output, rx_apple_output): (Sender<u8>, Receiver<u8>) = mpsc::channel();
+    let (tx_apple_output, rx_apple_output): (Sender<u8>, Receiver<u8>) = unbounded();
     pia.set_output_channel_b(tx_apple_output);
     let terminal = ConsoleTerminal::new(rx_apple_output);
 
     // channel from keyboard to PIA (keyboard=tx, PIA=rx)
     let (tx_apple_input, rx_apple_input): (Sender<InputSignal>, Receiver<InputSignal>) =
-        mpsc::channel();
+        unbounded();
     pia.set_input_channel(rx_apple_input);
     let check_input = || -> bool {
         let mut stop = false;

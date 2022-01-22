@@ -9,6 +9,7 @@ default-run = "functional-test"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+crossbeam-channel = "0.5.2"
 
 [lib]
 name = "rust6502"

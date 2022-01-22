@@ -9,6 +9,10 @@
 - **variable RAM/memory size** - not fixed to e.g. 64kB
 - only the component itself (e.g. `memory::Memory`) is aware of it's own address offset - `address_bus::AddressBus` expects to read from / write to the absolute address
 
+### for Apple 1 WASM
+
+- have the lowest possible footprint of JavaScript, directly handle DOM and events from Rust
+
 ## learnings
 
 ### unsigned integer overflows
@@ -183,6 +187,40 @@ pub struct AddressBus<'a> {
     }
 ```
 
+## mpsc::Sender cannot be shared between threads
+
+> classic yak shaving
+
+### Level 1
+
+For the WASM implementation I needed to have a compact implementation of Apple 1:
+
+- Hex monitor already "baked" into memory as loading ROMs from file system is not supported - loading it with JS `fetch` would be an alterative, but I did not want to spend the effort
+- no usage of the flexible `address_bus` but a fixed implementation just for Apple 1 WASM use case
+
+because I needed to bring it into a `request_animation_frame` flow, as `thread::sleep` is not supported in WASM and just leaving it out blocks the browser.
+
+
+### Level 2
+
+*g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+
+closure is `FnOnce` because it moves the variable `apple1.cpu` out of its environment
+
+### Level 3
+
+In order to bring into static
+
+```Rust
+pub trait InternalAddressing: Sync
+pub trait ExternalAddressing: Sync
+```
+
+crossbeam-channel = "0.5.2"
+
+
+
+
 
 ## resources
 
@@ -192,6 +230,7 @@ pub struct AddressBus<'a> {
 - [2nd other 6502 implementation to peek](https://github.com/GarettCooper/emulator_6502) -> [applied for NES](https://github.com/GarettCooper/gc_nes_emulator)
 - [other sample ROMs](https://github.com/alexander-akhmetov/apple1/tree/master/roms)
 - [Disassembler](https://masswerk.at/6502/disassembler.html)
+- [Rust Wasm Chip-8 emulator](https://github.com/ColinEberhardt/wasm-rust-chip8)
 
 ### helpers
 

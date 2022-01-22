@@ -24,13 +24,13 @@ impl fmt::Display for AddressingError {
     }
 }
 
-pub trait InternalAddressing {
+pub trait InternalAddressing: Sync {
     fn int_read(&mut self, addr: u16) -> u8;
     fn int_write(&mut self, addr: u16, data: u8);
     fn len(&self) -> usize;
 }
 
-pub trait ExternalAddressing {
+pub trait ExternalAddressing: Sync {
     fn read(&mut self, addr: u16) -> Result<u8, AddressingError>;
     fn write(&mut self, addr: u16, data: u8) -> Result<(), AddressingError>;
 }
