@@ -1,13 +1,23 @@
+extern crate wasm_bindgen;
+use std::fmt;
+
+use wasm_bindgen::{prelude::*, Clamped, JsCast};
+use web_sys::*;
+
 mod utils;
 
 use utils::set_panic_hook;
-use wasm_bindgen::{prelude::*, Clamped, JsCast};
-use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
 
 const CHAR_HEIGHT: usize = 8;
 const CHAR_WIDTH: usize = 8;
 const ROWS: u32 = 25;
 const COLS: u32 = 40;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
 
 fn display_char(x: usize, y: usize, pixels: &mut Vec<u8>, char_pixels: &Vec<u8>) {
     for r in 0..=7 {
@@ -58,6 +68,7 @@ pub fn start() {
 
     for y in 0..ROWS as usize {
         for x in 0..COLS as usize {
+            // log(&fmt::format(format_args!("x {} y {}", x, y)));
             display_char(x, y, &mut pixels, &sample);
             let image = ImageData::new_with_u8_clamped_array_and_sh(
                 Clamped(&pixels),
