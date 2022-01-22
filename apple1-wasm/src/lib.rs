@@ -1,17 +1,20 @@
 extern crate wasm_bindgen;
-use std::fmt;
 
+use std::fmt;
+use std::sync::mpsc::{self, TryRecvError};
+use std::sync::mpsc::{Receiver, Sender};
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use web_sys::*;
 
+use rust6502::address_bus::*;
+use rust6502::mc6821::*;
+use rust6502::memory::*;
+use rust6502::mos6502::*;
+
 mod utils;
+mod wasm_terminal;
 
 use utils::set_panic_hook;
-
-const CHAR_HEIGHT: usize = 8;
-const CHAR_WIDTH: usize = 8;
-const ROWS: u32 = 25;
-const COLS: u32 = 40;
 
 #[wasm_bindgen]
 extern "C" {
@@ -19,64 +22,20 @@ extern "C" {
     fn log(s: &str);
 }
 
-fn display_char(x: usize, y: usize, pixels: &mut Vec<u8>, char_pixels: &Vec<u8>) {
-    for r in 0..=7 {
-        for c in 0..=7 {
-            let char_index = r * CHAR_WIDTH + c;
-            let pixel_index = ((y * CHAR_HEIGHT + r) * 40 * CHAR_WIDTH + (x * CHAR_WIDTH + c)) * 4;
-            pixels[pixel_index + 0] = char_pixels[char_index] * 0x33;
-            pixels[pixel_index + 1] = char_pixels[char_index] * 0xff;
-            pixels[pixel_index + 2] = char_pixels[char_index] * 0x66;
-            pixels[pixel_index + 3] = 0xff;
-        }
-    }
-}
-
-fn init_context_canvas() -> (CanvasRenderingContext2d, HtmlCanvasElement) {
-    let document = web_sys::window().unwrap().document().unwrap();
-    let canvas = document.get_element_by_id("canvas").unwrap();
-    let canvas: web_sys::HtmlCanvasElement = canvas
-        .dyn_into::<web_sys::HtmlCanvasElement>()
-        .map_err(|_| ())
-        .unwrap();
-
-    let context = canvas
-        .get_context("2d")
-        .unwrap()
-        .unwrap()
-        .dyn_into::<web_sys::CanvasRenderingContext2d>()
-        .unwrap();
-    canvas.set_width(COLS * CHAR_WIDTH as u32);
-    canvas.set_height(ROWS * CHAR_HEIGHT as u32);
-    (context, canvas)
-}
-
 #[wasm_bindgen(start)]
 pub fn start() {
     set_panic_hook();
 
-    let (context, canvas) = init_context_canvas();
+    let (tx_apple_output, rx_apple_output): (Sender<u8>, Receiver<u8>) = mpsc::channel();
+    let (tx_apple_input, rx_apple_input): (Sender<InputSignal>, Receiver<InputSignal>) =
+        mpsc::channel();
 
-    let sample: Vec<u8> = vec![
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
-        0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
-        1, 1, 1, 1,
-    ];
+    let mut terminal = wasm_terminal::WasmTerminal::new(rx_apple_output);
 
-    let mut pixels: Vec<u8> = vec![0; 40 * 8 * 25 * 8 * 4];
-    let mut offset = 0u8;
-
-    for y in 0..ROWS as usize {
-        for x in 0..COLS as usize {
-            // log(&fmt::format(format_args!("x {} y {}", x, y)));
-            display_char(x, y, &mut pixels, &sample);
-            let image = ImageData::new_with_u8_clamped_array_and_sh(
-                Clamped(&pixels),
-                COLS * CHAR_WIDTH as u32,
-                ROWS * CHAR_HEIGHT as u32,
-            )
-            .unwrap();
-            context.put_image_data(&image, 0., 0.).unwrap();
-        }
-    }
+    tx_apple_output.send(0x01);
+    tx_apple_output.send(0x01);
+    terminal.event_loop();
+    tx_apple_output.send(0x0A);
+    tx_apple_output.send(0x01);
+    terminal.event_loop();
 }
