@@ -1,9 +1,11 @@
 use std::{
-    sync::mpsc::{self, Receiver, Sender},
+    sync::mpsc::{self, Receiver, Sender, TryRecvError},
     thread,
 };
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use web_sys::*;
+
+use crate::wasm_helpers::*;
 
 const CHAR_HEIGHT: usize = 8;
 const CHAR_WIDTH: usize = 8;
@@ -18,6 +20,7 @@ pub struct WasmTerminal {
     cursor_y: usize,
     char_buffer: Vec<u8>,
     pixel_buffer: Vec<u8>,
+    input: Option<u8>,
 }
 
 impl WasmTerminal {
@@ -39,11 +42,21 @@ impl WasmTerminal {
         canvas.set_width(COLS * CHAR_WIDTH as u32);
         canvas.set_height(ROWS * CHAR_HEIGHT as u32);
 
-        let (tx_input, rx_input) = mpsc::channel();
+        let (tx_input, rx_input): (Sender<u8>, Receiver<u8>) = mpsc::channel();
 
-        // thread::spawn(move || loop {
-        //     tx_input.send(getch() as u8).unwrap();
-        // });
+        let keydown_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            match tx_input.send(event.key_code() as u8) {
+                Ok(()) => {}
+                Err(e) => log(&e.to_string()),
+            }
+        }) as Box<dyn FnMut(_)>);
+
+        document
+            .add_event_listener_with_callback("keydown", keydown_closure.as_ref().unchecked_ref())
+            .map_err(|_| ())
+            .unwrap();
+
+        keydown_closure.forget();
 
         WasmTerminal {
             rx_input,
@@ -53,12 +66,13 @@ impl WasmTerminal {
             cursor_y: 0,
             char_buffer: vec![0; COLS as usize * ROWS as usize],
             pixel_buffer: vec![0; COLS as usize * CHAR_WIDTH * ROWS as usize * CHAR_HEIGHT * 4],
+            input: None,
         }
     }
 
-    // pub fn check_input(&self) -> Result<u8, TryRecvError> {
-    //     self.rx_input.try_recv()
-    // }
+    pub fn check_input(&self) -> Result<u8, TryRecvError> {
+        self.rx_input.try_recv()
+    }
 
     pub fn event_loop(&mut self) {
         let mut screen_changed = false;

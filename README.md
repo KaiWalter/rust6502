@@ -9,6 +9,10 @@
 - **variable RAM/memory size** - not fixed to e.g. 64kB
 - only the component itself (e.g. `memory::Memory`) is aware of it's own address offset - `address_bus::AddressBus` expects to read from / write to the absolute address
 
+### for Apple 1 WASM
+
+- have the lowest possible footprint of JavaScript, directly handle DOM and events from Rust
+
 ## learnings
 
 ### unsigned integer overflows
@@ -192,6 +196,7 @@ pub struct AddressBus<'a> {
 - [2nd other 6502 implementation to peek](https://github.com/GarettCooper/emulator_6502) -> [applied for NES](https://github.com/GarettCooper/gc_nes_emulator)
 - [other sample ROMs](https://github.com/alexander-akhmetov/apple1/tree/master/roms)
 - [Disassembler](https://masswerk.at/6502/disassembler.html)
+- [Rust Wasm Chip-8 emulator](https://github.com/ColinEberhardt/wasm-rust-chip8)
 
 ### helpers
 
