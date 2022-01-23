@@ -242,6 +242,12 @@ diff -y ./func-go-tail.txt ./func-rust-tail.txt | less
 
 > REMINDER to self : idiomatic Rust uses `snake_case` for variables, methods, macros, fields and modules; `UpperCamelCase` for types and enum variants; and `SCREAMING_SNAKE_CASE` for statics and constants
 
+#### render ROM to u8 vec
+
+```shell
+hexdump -v -e '16/1 "0x%02x, " "\n"' roms/Apple1_charmap.bin > rom.txt
+```
+
 
 ## perf tests
 
