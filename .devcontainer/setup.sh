@@ -37,6 +37,9 @@ cargo install cargo-edit
 cargo install wasm-pack
 cargo install cargo-generate
 
+## setup git
+git config --global core.editor "code --wait"
+
 ## setup and install oh-my-zsh
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 cp -R /root/.oh-my-zsh /home/$USERNAME

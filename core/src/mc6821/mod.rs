@@ -2,8 +2,7 @@
 mod tests;
 
 use crate::address_bus::InternalAddressing;
-use std::sync::mpsc;
-use std::sync::mpsc::{Receiver, Sender};
+use crossbeam_channel::*;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum Signal {

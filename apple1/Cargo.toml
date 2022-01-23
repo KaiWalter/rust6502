@@ -9,3 +9,4 @@ authors = ["Kai Walter <ancientitguy@outlook.com>"]
 [dependencies]
 ncurses = "5.101.0"
 rust6502 = { path = "../core" }
+crossbeam-channel = "0.5.2"

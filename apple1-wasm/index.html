@@ -15,7 +15,7 @@
         }
 
         #canvas {
-            outline: lightgreen 3px solid;
+            outline: lightgreen 1px solid;
             background-color: black;
         }
     </style>
@@ -23,17 +23,12 @@
 </head>
 
 <body>
-    <!-- 40x25 characters with 2x2 pixelsize -->
     <h2>Apple 1 emulator</h2>
     <hr />
     <canvas id="canvas"></canvas>
     <script type="module">
-        import init, { start } from "./pkg/apple1_wasm.js";
-
-        init()
-            .then(() => {
-                start();
-            });
+        import init from "./pkg/apple1_wasm.js";
+        init();
     </script>
 </body>
 

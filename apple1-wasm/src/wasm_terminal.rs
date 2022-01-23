@@ -1,7 +1,4 @@
-use std::{
-    sync::mpsc::{self, Receiver, Sender, TryRecvError},
-    thread,
-};
+use crossbeam_channel::*;
 use wasm_bindgen::{prelude::*, Clamped, JsCast};
 use web_sys::*;
 
@@ -42,7 +39,7 @@ impl WasmTerminal {
         canvas.set_width(COLS * CHAR_WIDTH as u32);
         canvas.set_height(ROWS * CHAR_HEIGHT as u32);
 
-        let (tx_input, rx_input): (Sender<u8>, Receiver<u8>) = mpsc::channel();
+        let (tx_input, rx_input): (Sender<u8>, Receiver<u8>) = unbounded();
 
         let keydown_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
             match tx_input.send(event.key_code() as u8) {
