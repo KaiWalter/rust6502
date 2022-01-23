@@ -1,5 +1,3 @@
-#[macro_use]
-extern crate lazy_static;
 extern crate wasm_bindgen;
 
 use crossbeam_channel::*;

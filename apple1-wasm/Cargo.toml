@@ -1,8 +1,8 @@
 [package]
 name = "apple1-wasm"
 version = "0.1.0"
-authors = ["GitHub <noreply@github.com>"]
 edition = "2021"
+authors = ["Kai Walter <ancientitguy@outlook.com>"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -14,7 +14,6 @@ default = ["console_error_panic_hook"]
 js-sys = "0.3.55"
 wasm-bindgen = "0.2.78"
 crossbeam-channel = "0.5.2"
-lazy_static = "*"
 rust6502 = { path = "../core" }
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
