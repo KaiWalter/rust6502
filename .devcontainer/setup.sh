@@ -1,29 +1,22 @@
 ## update and install 1st level of packages
 apt-get update
 apt-get install -y \
-curl \
-git \
-gnupg2 \
-jq \
-sudo \
-zsh \
-build-essential \
-libssl-dev libncurses5-dev libncursesw5-dev \
-openssl \
-unzip
+    curl \
+    git \
+    gnupg2 \
+    jq \
+    sudo \
+    zsh \
+    build-essential \
+    libssl-dev libncurses5-dev libncursesw5-dev \
+    openssl \
+    unzip
 
 ## update and install 2nd level of packages
-curl -fsSL https://deb.nodesource.com/setup_17.x | sudo -E bash -
+apt-get install -y pkg-config
 
-apt-get update
-apt-get install -y \
-pkg-config \
-nodejs
-
-## Install rustup and common components
+## install rustup and common components
 curl https://sh.rustup.rs -sSf | sh -s -- -y
-
-export PATH=/root/.cargo/bin:$PATH
 
 rustup install nightly
 rustup component add rustfmt
@@ -35,7 +28,6 @@ cargo install cargo-expand
 cargo install cargo-edit
 
 cargo install wasm-pack
-cargo install cargo-generate
 
 ## setup git
 git config --global core.editor "code --wait"

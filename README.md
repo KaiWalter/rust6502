@@ -1,19 +1,55 @@
 # Experimental 6502 emulator in Rust
 
-> With this project I try to **learn Rust**. Hence it is not intended as a fully working emulator or a good example - it is rather a reflection of my progress.
+With this project I try to **learn Rust**. Hence it is not intended as a fully working emulator or a good example - it is rather a reflection of my progress.
+
+## TL;DR - run stuff
+
+> generally check out `.devcontainer/setup.sh` for system or Rust/Cargo dependencies used
+
+### functional test
+
+from `/`
+
+```shell
+cargo test --release
+```
+
+### Apple 1 with Linux terminal
+
+> packages `libncurses5-dev libncursesw5-dev` required
+
+from `/`
+
+```shell
+cargo run --bin apple1 --release
+```
+
+### Apple 1 with Wasm
+
+> `(cargo) wasm-pack` and Python 3 to run `http.server` required
+
+from `/apple1-wasm`
+
+```shell
+./run.sh
+```
 
 ## general design ideas
 
-- **everything is a component** (RAM, ROM, PIA) which is linked by interface (`address_bus::Addressing trait`) to the emulator, so it can be expanded for various use cases (as with my previous implementations Apple1, Commodore PET, ...)
+- **everything is a component** (RAM, ROM, PIA) which is linked by interface (`address_bus::ExternalAddressing trait`) to the emulator, so it can be expanded for various use cases (as with my previous implementations Apple1, Commodore PET, ...)
 - no loading of a ROM just into a big 64kB memory space - **ROMs have separate spaces** addressable by `address_bus::AddressBus`
 - **variable RAM/memory size** - not fixed to e.g. 64kB
 - only the component itself (e.g. `memory::Memory`) is aware of it's own address offset - `address_bus::AddressBus` expects to read from / write to the absolute address
 
-### for Apple 1 WASM
+### for Apple 1 Wasm
 
 - have the lowest possible footprint of JavaScript, directly handle DOM and events from Rust
 
+----
+
 ## learnings
+
+I migrated the code base from my previous [Go 6502 implementation](https://github.com/KaiWalter/go6502). Here is what I stumbled over in the beginning of the tranistion:
 
 ### unsigned integer overflows
 
@@ -187,40 +223,79 @@ pub struct AddressBus<'a> {
     }
 ```
 
-## mpsc::Sender cannot be shared between threads
+## Wasm - a totally different beast
 
-> classic yak shaving
+Migration of the pure Linux console version of the Apple 1 - after getting used to some of the **Rust** pecularities - turned out quite straight forward.
 
-### Level 1
+The **Go** version is implemented with SDL2 terminal rendering. For the **Rust** version I wanted to stay in the GitHub Codespace, which cannot run GUI applications. Hence I tried to get terminal rendering (with the original character set) working with Wasm.
 
-For the WASM implementation I needed to have a compact implementation of Apple 1:
+To really get the native **Rust Wasm** "feeling", I did not want a JavaScript heavy implementation like [Rust Wasm Chip-8 emulator](https://github.com/ColinEberhardt/wasm-rust-chip8) - also not extensively relying on **Node.js** and **Webpack**. Just a plain `index.html` and whatever minimum plumbing (**wasm-pack** in this case) is required. 
 
-- Hex monitor already "baked" into memory as loading ROMs from file system is not supported - loading it with JS `fetch` would be an alterative, but I did not want to spend the effort
-- no usage of the flexible `address_bus` but a fixed implementation just for Apple 1 WASM use case
+### yak shaving - iteration 0
 
-because I needed to bring it into a `request_animation_frame` flow, as `thread::sleep` is not supported in WASM and just leaving it out blocks the browser.
+For the Wasm implementation I needed to have a compact implementation of Apple 1:
 
+- Hex monitor already "baked" into memory as loading ROMs from file system is not supported - loading it with JS `fetch` would be an alterative, but I did not want (yet) to spend the effort
+- the multi-threaded approach could not easily be migrated from the [console version](apple1/src/main.rs) to Wasm; hence no usage of the flexible `address_bus`, but a fixed implementation just for Apple 1 Wasm use case
+- as `thread::sleep` is not supported in Wasm (to give the browser some breathing space), I needed to bring it into a `request_animation_frame` flow; only cycling processor operations and checking inputs blocked the browser
 
-### Level 2
+**approach:** make a `request_animation_frame` flow implementation like
 
-*g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+```
+    let inner = Rc::new(RefCell::new(None));
+    let outer = inner.clone();
 
-closure is `FnOnce` because it moves the variable `apple1.cpu` out of its environment
+    *outer.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        // check input from the terminal and send to PIA
+        ...
 
-### Level 3
+        // do minimum x processor cycles before checking input again
+        ...
 
-In order to bring into static
+        request_animation_frame(inner.borrow().as_ref().unwrap());
+    }) as Box<dyn FnMut()>));
 
-```Rust
-pub trait InternalAddressing: Sync
-pub trait ExternalAddressing: Sync
+    request_animation_frame(outer.borrow().as_ref().unwrap());
 ```
 
-crossbeam-channel = "0.5.2"
+### yak shaving - iteration 1
+
+Struggling with bringing the instance variables of Cpu, Memory, ... into the `Closure` of the `request_animation_frame` loop ...
+
+**approach:** make a `static` compact Apple 1 implementation/instance
+
+### yak shaving - iteration 2
+
+Too lazy to deal with `lazy_static!` macro ...
+
+```Rust
+pub struct Apple1Compact<'a> {
+    pub cpu: Option<Cpu<'a>>,
+    pub bus: Option<Apple1CompactBus>,
+    pub terminal: Option<WasmTerminal>,
+    pub check_input: Option<Box<dyn Fn()>>,
+}
+
+static mut COMPACT_APPLE1: Apple1Compact = Apple1Compact {
+    cpu: None,
+    bus: None,
+    terminal: None,
+    check_input: None,
+};
+```
+
+**approach:** initialize in startup code - not in declaration or constructors
+
+### yak shaving - iteration 3
+
+`std::sync::mpsc::channel` variables did not make the hop from startup code into the above mentioned `Closure`. Message: `mpsc::Sender cannot be shared between threads` ...
+
+**approach:** change to `crossbeam-channel` to allow sharing of `Sender` / `Receiver` variables
 
 
 
 
+----
 
 ## resources
 
@@ -232,7 +307,9 @@ crossbeam-channel = "0.5.2"
 - [Disassembler](https://masswerk.at/6502/disassembler.html)
 - [Rust Wasm Chip-8 emulator](https://github.com/ColinEberhardt/wasm-rust-chip8)
 
-### helpers
+### unsorted / helpers
+
+#### cut run logs for easier comparison
 
 ```shell
 diff -y --suppress-common-lines ./func-go.txt ./func-rust.txt | less
@@ -246,45 +323,4 @@ diff -y ./func-go-tail.txt ./func-rust-tail.txt | less
 
 ```shell
 hexdump -v -e '16/1 "0x%02x, " "\n"' roms/Apple1_charmap.bin > rom.txt
-```
-
-
-## perf tests
-
-<https://github.com/flamegraph-rs/flamegraph>
-<https://stackoverflow.com/a/60276918/4947644>
-
-### for WSL2
-
-```shell
-sudo apt install build-essential flex bison libssl-dev libelf-dev
-sudo apt-get install libunwind-dev libw-dev 
-cd ~/src
-git clone --depth=1 https://github.com/microsoft/WSL2-Linux-Kernel.git
-cd WSL2-Linux-Kernel/tools/perf
-sudo make DESTDIR=/usr/lib/linux-tools/linux-tools-`uname -r` install
-```
-
-
-```shell
-export PERF=/usr/lib/linux-tools/linux-tools-`uname -r`/perf
-cargo flamegraph --dev --unit-test -- mos6502::tests::functional_test
-/usr/lib/linux-tools/linux-tools-`uname -r`/perf report -i perf.data
-```
-
-problem: 
-
-```
-test mos6502::tests::functional_test ... ok
-
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 30 filtered out; finished in 100.64s
-
-[ perf record: Woken up 3224 times to write data ]
-[ perf record: Captured and wrote 806.051 MB perf.data (100139 samples) ]
-writing flamegraph to "flamegraph.svg"
-Error: unable to generate a flamegraph from the collapsed stack data
-
-Caused by:
-    0: I/O error: No stack counts found
-    1: No stack counts found
 ```
