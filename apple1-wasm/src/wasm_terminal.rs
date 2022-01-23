@@ -42,6 +42,11 @@ impl WasmTerminal {
         let (tx_input, rx_input): (Sender<u8>, Receiver<u8>) = unbounded();
 
         let keydown_closure = Closure::wrap(Box::new(move |event: web_sys::KeyboardEvent| {
+            // log(&format!(
+            //     "key code:{:4x} char code:{:2x}",
+            //     event.key_code(),
+            //     event.char_code()
+            // ));
             match tx_input.send(event.key_code() as u8) {
                 Ok(()) => {}
                 Err(e) => log(&e.to_string()),

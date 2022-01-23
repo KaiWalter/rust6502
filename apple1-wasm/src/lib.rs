@@ -107,6 +107,7 @@ pub fn start() {
                 if let Ok(mut c) = terminal.check_input() {
                     match c {
                         0x0A => c = 0x0D,
+                        0xBE => c = 0x2E,
                         _ => {}
                     };
 
