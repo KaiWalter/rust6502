@@ -292,8 +292,26 @@ static mut COMPACT_APPLE1: Apple1Compact = Apple1Compact {
 
 **approach:** change to `crossbeam-channel` to allow sharing of `Sender` / `Receiver` variables
 
+### yak shaving - iteration 4
 
+In setup code the channel from keyboard to PIA is created:
 
+```Rust
+        // channel from keyboard to PIA (keyboard=tx, PIA=rx)
+        let (tx_apple_input, rx_apple_input): (Sender<InputSignal>, Receiver<InputSignal>) =
+            unbounded();
+```
+
+to be added to the address bus.
+
+However this cannot be used in the `COMPACT_APPLE1.check_input` closure:
+
+```
+114 | |                     tx_apple_input.send(InputSignal::CA1(Signal::Fall)).unwrap();
+    | |                     ^^^^^^^^^^^^^^ borrowed value does not live long enough
+```
+
+**approach:** wrap it in a static `TX_APPLE_INPUT = Some(Mutex::new(tx_apple_input));` and unwrap it in the closure `let tx_apple_input = TX_APPLE_INPUT.as_ref().unwrap().lock().unwrap().clone();` until I better comprehend this lifetime issue
 
 ----
 
