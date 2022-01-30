@@ -15,6 +15,7 @@ js-sys = "0.3.55"
 wasm-bindgen = "0.2.78"
 crossbeam-channel = "0.5.2"
 rust6502 = { path = "../core" }
+ouroboros = "*"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
