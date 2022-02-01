@@ -317,6 +317,8 @@ However this cannot be used in the `COMPACT_APPLE1.check_input` closure:
 
 ## resources
 
+### emulation
+
 - [6502 instruction set](https://masswerk.at/6502/6502_instruction_set.html)
 - [Writing an OS in Rust by Philipp Oppermann](https://os.phil-opp.com/)
 - [1st other 6502 implementation to peek](https://github.com/alexander-akhmetov/mos6502) -> [applied for Apple 1](https://github.com/alexander-akhmetov/apple1)
@@ -324,6 +326,10 @@ However this cannot be used in the `COMPACT_APPLE1.check_input` closure:
 - [other sample ROMs](https://github.com/alexander-akhmetov/apple1/tree/master/roms)
 - [Disassembler](https://masswerk.at/6502/disassembler.html)
 - [Rust Wasm Chip-8 emulator](https://github.com/ColinEberhardt/wasm-rust-chip8)
+
+### Rust
+
+- [Visualizing memory layout of Rust's data types](https://youtu.be/rDoqT-a6UFg)
 
 ### unsorted / helpers
 
