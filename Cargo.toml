@@ -5,3 +5,4 @@ members = [
     "apple1",
     "apple1-wasm"
 ]
+resolver = "2"
