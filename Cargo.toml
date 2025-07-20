@@ -3,6 +3,7 @@
 members = [
     "core",
     "apple1",
-    "apple1-wasm"
+    "apple1-wasm",
+    "apple1-gen"
 ]
 resolver = "2"
