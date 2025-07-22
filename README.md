@@ -49,7 +49,7 @@ from `/apple1-wasm`
 
 ## learnings
 
-I migrated the code base from my previous [Go 6502 implementation](https://github.com/KaiWalter/go6502). Here is what I stumbled over in the beginning of the tranistion:
+I migrated the code base from my previous [Go 6502 implementation](https://github.com/KaiWalter/go6502). Here is what I stumbled over in the beginning of the transition:
 
 ### unsigned integer overflows
 
