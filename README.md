@@ -157,7 +157,7 @@ pub struct AddressBus<'a> {
     component_addr: HashMap<u16, &'a mut (dyn Addressing)>, // 1:1 map component to its addressing
 }
 ...
-pub fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+pub fn read(&mut self, addr: u16) -> Result<u8, AddressingError> {
     let block = (addr as usize / self.block_size) as u16;
     if self.block_component_map.contains_key(&block) {
         let component_key = self.block_component_map[&block];
@@ -193,7 +193,7 @@ pub struct AddressBus<'a> {
     component_addr: Vec<&'a mut dyn Addressing>, // 1:1 map component to its addressing
 }
 ...
-    pub fn read(&self, addr: u16) -> Result<u8, AddressingError> {
+    pub fn read(&mut self, addr: u16) -> Result<u8, AddressingError> {
         let block = addr as usize / self.block_size;
         if self.block_component_map[block] == usize::MAX {
             Err(AddressingError::new("read", addr))
