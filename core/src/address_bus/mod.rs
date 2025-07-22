@@ -64,7 +64,7 @@ impl<'a> AddressBus<'a> {
             self.component_addr.push(component);
 
             let from_block = from_addr as usize / self.block_size;
-            let to_block = (from_addr as usize + size as usize) / self.block_size as usize;
+            let to_block = ((from_addr as usize + size as usize - 1) / self.block_size) + 1;
             for block in from_block..to_block {
                 self.block_component_map[block] = component_key;
             }

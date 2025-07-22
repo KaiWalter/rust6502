@@ -66,3 +66,20 @@ fn test_input_channel() {
     // assert
     assert_eq!(pia.int_read(KBD), expected);
 }
+
+#[test]
+fn test_ca2_and_cb2_input() {
+    // arrange
+    let mut pia = MC6821::new();
+    let (tx, rx) = crossbeam_channel::unbounded();
+    pia.set_input_channel(rx);
+
+    // act
+    tx.send(InputSignal::CA2(Signal::Rise)).unwrap();
+    tx.send(InputSignal::CB2(Signal::Rise)).unwrap();
+    pia.process_input();
+
+    // assert
+    assert_eq!(pia.get_ca2(), Signal::Rise);
+    assert_eq!(pia.get_cb2(), Signal::Rise);
+}

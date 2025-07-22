@@ -4,7 +4,7 @@ mod tests;
 use crate::address_bus::InternalAddressing;
 use crossbeam_channel::*;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Signal {
     Fall = 0,
     Rise = 1,
@@ -262,7 +262,7 @@ impl MC6821 {
             self.cra |= 0x40; // set bit 6 IRQA2
             self.update_irq();
         }
-        self.ca1 = s;
+        self.ca2 = s;
     }
 
     pub fn get_ca2(&self) -> Signal {
@@ -307,7 +307,7 @@ impl MC6821 {
             self.crb |= 0x40; // set bit 6 IRQB2
             self.update_irq();
         }
-        self.cb1 = s;
+        self.cb2 = s;
     }
 
     pub fn get_cb2(&self) -> Signal {
