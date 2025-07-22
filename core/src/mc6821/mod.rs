@@ -4,7 +4,7 @@ mod tests;
 use crate::address_bus::InternalAddressing;
 use crossbeam_channel::*;
 
-#[derive(PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Signal {
     Fall = 0,
     Rise = 1,
