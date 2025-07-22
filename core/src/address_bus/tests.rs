@@ -145,3 +145,21 @@ fn load_rom() {
     assert_eq!(actual.is_ok(), true);
     assert_eq!(actual.is_err(), false);
 }
+
+#[test]
+fn add_component_unaligned_start() {
+    // arrange
+    let offset = 0x10u16;
+    let mut mem = Memory::new(offset, 0x200); // two blocks in size
+    let mut bus = AddressBus::new(0x100);
+
+    let size = mem.len();
+    assert!(bus.add_component(offset, size, &mut mem).is_ok());
+
+    let addr = offset + size as u16 - 1; // last byte in range
+    bus.write(addr, 0xAA).expect("write failed");
+    let val = bus.read(addr).unwrap();
+
+    // assert
+    assert_eq!(val, 0xAA);
+}
