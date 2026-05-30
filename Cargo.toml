@@ -6,3 +6,7 @@ members = [
     "apple1-wasm"
 ]
 resolver = "2"
+
+[profile.release.package.apple1-wasm]
+# Optimize wasm binary for size.
+opt-level = "s"
