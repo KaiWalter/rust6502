@@ -4,11 +4,13 @@
   inputs = {
     # Stable nixpkgs base + rust-overlay for current stable Rust releases.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
+    # Track select fast-moving tools from unstable when needed.
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { nixpkgs, flake-utils, rust-overlay, ... }:
+  outputs = { nixpkgs, nixpkgs-unstable, flake-utils, rust-overlay, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
@@ -16,7 +18,14 @@
           overlays = [ (import rust-overlay) ];
         };
 
+        pkgsUnstable = import nixpkgs-unstable {
+          inherit system;
+        };
+
         lib = pkgs.lib;
+
+        # Newer wasm-pack is required than what stable nixpkgs currently provides.
+        wasmPackPkg = pkgsUnstable.wasm-pack;
 
         # Always tracks the latest stable Rust at your current lockfile revision.
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
@@ -34,7 +43,7 @@
           packages = with pkgs; [
             rustToolchain
             pkg-config
-            wasm-pack
+            wasmPackPkg
             binaryen
             python3
           ];
