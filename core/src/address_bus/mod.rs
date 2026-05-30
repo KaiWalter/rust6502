@@ -54,7 +54,7 @@ impl<'a> AddressBus<'a> {
         &mut self,
         from_addr: u16,
         size: usize,
-        component: &'a mut (dyn InternalAddressing),
+        component: &'a mut dyn InternalAddressing,
     ) -> Result<(), AddressingError> {
         let size_outside_blocks = size % self.block_size as usize;
         let mem_outside_block = component.len() % self.block_size as usize;
