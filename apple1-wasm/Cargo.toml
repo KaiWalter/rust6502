@@ -2,7 +2,7 @@
 name = "apple1-wasm"
 version = "0.1.0"
 edition = "2021"
-authors = ["Kai Walter <ancientitguy@outlook.com>"]
+authors = ["Project contributors"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
